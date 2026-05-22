@@ -40,6 +40,8 @@ def ensure_mutmut_available() -> None:
 def temporary_mutmut_paths(
     project_root: Path,
     relative_paths: list[str],
+    *,
+    test_cmd: str | None = None,
 ) -> Iterator[None]:
     """Temporarily set mutmut paths_to_mutate in pyproject.toml."""
     pyproject = project_root / "pyproject.toml"
@@ -65,6 +67,8 @@ def temporary_mutmut_paths(
         mutmut_section = {}
         tool["mutmut"] = mutmut_section
     mutmut_section["paths_to_mutate"] = relative_paths
+    if test_cmd is not None:
+        mutmut_section["runner"] = test_cmd
 
     pyproject.write_text(tomli_w.dumps(data), encoding="utf-8")
     try:

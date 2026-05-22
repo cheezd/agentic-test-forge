@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agentic_test_forge.analysis.crap import CoverageDataMissingError, analyze_crap
+from agentic_test_forge.analysis.dry import analyze_dry
 from agentic_test_forge.config.models import ForgeConfig
 from agentic_test_forge.mutation.code import (
     GitScopeError,
@@ -39,6 +40,11 @@ def run_quality_check(
     crap_report = None
     mutation_report = None
     gherkin_report = None
+    dry_report = None
+
+    if config.gates.dry:
+        gates_run.append("dry")
+        dry_report = analyze_dry(source_paths, search_root=root)
 
     if config.gates.crap:
         gates_run.append("crap")
@@ -63,6 +69,7 @@ def run_quality_check(
                 manifest_dir=config.manifest_dir,
                 search_root=root,
                 full_run=full_run,
+                test_cmd=config.mutation_test_cmd,
             )
         except (GitScopeError, MutationUnavailableError, MutmutRunError) as exc:
             errors.append(f"mutation: {exc}")
@@ -89,5 +96,6 @@ def run_quality_check(
         crap=crap_report,
         mutation=mutation_report,
         gherkin=gherkin_report,
+        dry=dry_report,
         errors=errors,
     )

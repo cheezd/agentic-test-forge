@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from agentic_test_forge.analysis.crap import CrapReport
+from agentic_test_forge.analysis.dry import DryReport
 from agentic_test_forge.mutation.code.report import MutationReport
 from agentic_test_forge.mutation.gherkin.report import GherkinMutationReport
 from agentic_test_forge.orchestration.report import CheckReport
@@ -79,6 +80,29 @@ def print_mutation_report(report: MutationReport, console: Console) -> None:
     console.print(table)
 
 
+def print_dry_report(report: DryReport, console: Console) -> None:
+    """Render an advisory DRY duplication report."""
+    console.print("[bold]DRY analysis[/bold] — [yellow]ADVISORY[/yellow]")
+    console.print(report.summary)
+
+    if not report.findings:
+        return
+
+    table = Table(title="Potential duplicate functions")
+    table.add_column("Function")
+    table.add_column("File")
+    table.add_column("Duplicate of")
+
+    for finding in report.findings:
+        table.add_row(
+            finding.qualified_name,
+            finding.filepath,
+            f"{finding.duplicate_of} ({finding.duplicate_filepath})",
+        )
+
+    console.print(table)
+
+
 def print_check_report(report: CheckReport, console: Console) -> None:
     """Render a combined quality gate report."""
     status_style = "green" if report.status == "pass" and not report.errors else "red"
@@ -89,6 +113,9 @@ def print_check_report(report: CheckReport, console: Console) -> None:
     console.print(f"[bold]Quality gate[/bold] — [{status_style}]{label}[/{status_style}]")
     console.print(report.summary)
 
+    if report.dry is not None:
+        console.print()
+        print_dry_report(report.dry, console)
     if report.crap is not None:
         console.print()
         print_crap_report(report.crap, console)

@@ -26,6 +26,7 @@ gherkin_runner = "pytest"
 crap = true
 mutation = true
 gherkin = false
+dry = true
 """.strip(),
         encoding="utf-8",
     )
@@ -46,6 +47,7 @@ gherkin = false
     assert config.gates.crap is True
     assert config.gates.mutation is True
     assert config.gates.gherkin is False
+    assert config.gates.dry is True
 
 
 def test_forge_toml_overrides_pyproject(tmp_path: Path) -> None:
@@ -83,3 +85,4 @@ def test_load_config_defaults_when_missing(tmp_path: Path) -> None:
     assert config.gherkin_runner == "behave"
     assert config.gherkin_paths == ["features"]
     assert config.gates.crap is False
+    assert config.gates.dry is False

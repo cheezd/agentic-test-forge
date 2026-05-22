@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from agentic_test_forge.analysis.crap import CrapReport
+from agentic_test_forge.analysis.dry import DryReport
 from agentic_test_forge.mutation.code.report import MutationReport
 from agentic_test_forge.mutation.gherkin.report import GherkinMutationReport
 
@@ -24,6 +25,7 @@ class CheckReport:
     crap: CrapReport | None = None
     mutation: MutationReport | None = None
     gherkin: GherkinMutationReport | None = None
+    dry: DryReport | None = None
     errors: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
@@ -41,6 +43,8 @@ class CheckReport:
             payload["reports"]["mutation"] = self.mutation.to_dict()
         if self.gherkin is not None:
             payload["reports"]["gherkin"] = self.gherkin.to_dict()
+        if self.dry is not None:
+            payload["reports"]["dry"] = self.dry.to_dict()
         return payload
 
     def to_json(self, indent: int = 2) -> str:
@@ -53,6 +57,7 @@ def build_check_report(
     crap: CrapReport | None,
     mutation: MutationReport | None,
     gherkin: GherkinMutationReport | None,
+    dry: DryReport | None,
     errors: list[str],
 ) -> CheckReport:
     if not gates_run and not errors:
@@ -90,5 +95,6 @@ def build_check_report(
         crap=crap,
         mutation=mutation,
         gherkin=gherkin,
+        dry=dry,
         errors=tuple(errors),
     )

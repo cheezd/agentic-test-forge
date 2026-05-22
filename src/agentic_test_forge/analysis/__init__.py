@@ -7,6 +7,7 @@ from agentic_test_forge.analysis.crap import (
     analyze_crap,
     compute_crap_score,
 )
+from agentic_test_forge.analysis.dry import DryFinding, DryReport, analyze_dry
 
 __all__ = [
     "CoverageDataMissingError",
@@ -14,4 +15,7 @@ __all__ = [
     "CrapReport",
     "analyze_crap",
     "compute_crap_score",
+    "DryFinding",
+    "DryReport",
+    "analyze_dry",
 ]

@@ -115,6 +115,7 @@ def mutate(
             base_ref=effective_base,
             manifest_dir=config.manifest_dir,
             full_run=full,
+            test_cmd=config.mutation_test_cmd,
         )
     except (GitScopeError, MutationUnavailableError, MutmutRunError) as exc:
         console.print(f"[red]Error:[/red] {exc}")

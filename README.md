@@ -4,14 +4,14 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**Phase 5 (quality gate)** — `forge check` orchestrator on `issue-21-phase-5-orchestrator`.
+**Phase 6 (polish)** — DRY advisory gate, mutation test cmd wiring, consumer CI guide on `issue-23-phase-6-polish`.
 
 | Command | Status |
 |---------|--------|
 | `forge crap` | Available |
 | `forge mutate` | Available (Linux/WSL; mutmut does not run natively on Windows) |
 | `forge mutate-gherkin` | Available |
-| `forge check` | Available |
+| `forge check` | Available (includes optional advisory DRY scan) |
 
 ## Install
 
@@ -67,9 +67,12 @@ gherkin_paths = ["features"]
 crap = true
 mutation = false
 gherkin = false
+dry = true         # advisory — does not fail forge check
 ```
 
 Optional override: `forge.toml` in the project root (merged over `pyproject.toml`).
+
+Consumer CI integration: see [`docs/consumer-ci.md`](docs/consumer-ci.md).
 
 ## Development
 
@@ -90,5 +93,5 @@ See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 2. CRAP analyzer (radon + coverage.py) — done
 3. Differential code mutation (mutmut) — done
 4. Gherkin mutation — done
-5. Quality gate orchestrator (`forge check`) — in progress
-6. DRY flagging, consumer CI guide, polish
+5. Quality gate orchestrator (`forge check`) — done
+6. DRY flagging, consumer CI guide, polish — in progress
