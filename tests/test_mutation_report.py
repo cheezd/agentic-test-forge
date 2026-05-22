@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from agentic_test_forge.mutation.code.report import (
+    MutationFinding,
     build_findings_from_meta,
     build_mutation_report,
     compute_mutation_score,
@@ -76,3 +77,23 @@ def test_build_mutation_report_passes_when_no_files_selected() -> None:
         selected_count=0,
     )
     assert report.status == "pass"
+
+
+def test_build_mutation_report_fails_when_findings_below_threshold() -> None:
+    findings = [
+        MutationFinding(
+            filepath="src/bad.py",
+            score=50.0,
+            killed=1,
+            total=2,
+            above_threshold=True,
+        ),
+    ]
+    report = build_mutation_report(
+        threshold=80.0,
+        findings=findings,
+        skipped_unchanged=["src/unchanged.py"],
+        selected_count=1,
+    )
+    assert report.status == "fail"
+    assert report.skipped_unchanged == ("src/unchanged.py",)

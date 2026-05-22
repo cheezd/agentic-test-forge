@@ -69,3 +69,46 @@ def test_analyze_mutation_skips_mutmut_when_disabled(tmp_path: Path) -> None:
 
     run_mock.assert_not_called()
     assert report.status == "pass"
+
+
+def test_analyze_mutation_runs_mutmut_and_updates_manifest(tmp_path: Path) -> None:
+    module = tmp_path / "src" / "sample.py"
+    module.parent.mkdir(parents=True)
+    module.write_text("def sample():\n    return 1\n", encoding="utf-8")
+
+    scope = ScopeResult(selected=(module.resolve(),), skipped_unchanged=(), base_ref="main")
+    finding = MutationFinding(
+        filepath="src/sample.py",
+        score=100.0,
+        killed=1,
+        total=1,
+        above_threshold=False,
+    )
+
+    with (
+        patch(
+            "agentic_test_forge.mutation.code.analyze.resolve_mutation_scope",
+            return_value=scope,
+        ),
+        patch(
+            "agentic_test_forge.mutation.code.analyze.temporary_mutmut_paths",
+        ),
+        patch(
+            "agentic_test_forge.mutation.code.analyze.run_mutmut",
+        ) as run_mock,
+        patch(
+            "agentic_test_forge.mutation.code.analyze.build_findings_from_meta",
+            return_value=[finding],
+        ),
+    ):
+        report = analyze_mutation(
+            ["src"],
+            threshold=80,
+            search_root=tmp_path,
+            manifest_dir=str(tmp_path / ".forge"),
+        )
+
+    run_mock.assert_called_once()
+    assert report.status == "pass"
+    manifest_file = tmp_path / ".forge" / "mutation-manifest.json"
+    assert manifest_file.is_file()
