@@ -87,6 +87,10 @@ manifest_dir = ".forge"
 mutation_threshold = 80
 mutation_base_ref = "main"
 mutation_test_cmd = "pytest"
+gherkin_threshold = 80
+gherkin_base_ref = "main"
+gherkin_test_cmd = "behave"
+gherkin_runner = "behave"
 
 [tool.forge.gates]
 crap = false

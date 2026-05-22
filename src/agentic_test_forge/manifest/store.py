@@ -53,6 +53,10 @@ def manifest_path(manifest_dir: str | Path) -> Path:
     return Path(manifest_dir) / "mutation-manifest.json"
 
 
+def gherkin_manifest_path(manifest_dir: str | Path) -> Path:
+    return Path(manifest_dir) / "gherkin-manifest.json"
+
+
 def file_content_hash(path: Path) -> str:
     digest = hashlib.sha256()
     digest.update(path.read_bytes())

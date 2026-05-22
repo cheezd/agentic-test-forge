@@ -6,7 +6,12 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from agentic_test_forge.config.models import CrapFormula, ForgeConfig, GateConfig
+from agentic_test_forge.config.models import (
+    CrapFormula,
+    ForgeConfig,
+    GateConfig,
+    GherkinRunner,
+)
 
 _DEFAULTS = ForgeConfig()
 
@@ -70,6 +75,13 @@ def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
     mutation_base_ref = str(raw.get("mutation_base_ref", _DEFAULTS.mutation_base_ref))
     mutation_test_cmd = str(raw.get("mutation_test_cmd", _DEFAULTS.mutation_test_cmd))
 
+    gherkin_threshold_raw = raw.get("gherkin_threshold", _DEFAULTS.gherkin_threshold)
+    gherkin_threshold = float(gherkin_threshold_raw)
+    gherkin_base_ref = str(raw.get("gherkin_base_ref", _DEFAULTS.gherkin_base_ref))
+    gherkin_test_cmd = str(raw.get("gherkin_test_cmd", _DEFAULTS.gherkin_test_cmd))
+    runner_raw = str(raw.get("gherkin_runner", _DEFAULTS.gherkin_runner))
+    gherkin_runner: GherkinRunner = "pytest" if runner_raw == "pytest" else "behave"
+
     return ForgeConfig(
         paths=paths_list,
         crap_threshold=threshold,
@@ -78,6 +90,10 @@ def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
         mutation_threshold=mutation_threshold,
         mutation_base_ref=mutation_base_ref,
         mutation_test_cmd=mutation_test_cmd,
+        gherkin_threshold=gherkin_threshold,
+        gherkin_base_ref=gherkin_base_ref,
+        gherkin_test_cmd=gherkin_test_cmd,
+        gherkin_runner=gherkin_runner,
         gates=_parse_gates(raw),
     )
 

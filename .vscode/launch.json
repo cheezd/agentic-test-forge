@@ -100,6 +100,23 @@
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "justMyCode": false
+    },
+    {
+      "name": "forge: mutate-gherkin",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/agentic_test_forge/cli/main.py",
+      "args": [
+        "mutate-gherkin",
+        "--path",
+        "tests/fixtures/gherkin_sample/features",
+        "--full",
+        "--threshold",
+        "80"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
     }
   ]
 }

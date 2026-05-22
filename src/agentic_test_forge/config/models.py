@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 CrapFormula = Literal["standard", "simplified"]
+GherkinRunner = Literal["behave", "pytest"]
 
 
 @dataclass(frozen=True)
@@ -28,4 +29,8 @@ class ForgeConfig:
     mutation_threshold: float = 80.0
     mutation_base_ref: str = "main"
     mutation_test_cmd: str = "pytest"
+    gherkin_threshold: float = 80.0
+    gherkin_base_ref: str = "main"
+    gherkin_test_cmd: str = "behave"
+    gherkin_runner: GherkinRunner = "behave"
     gates: GateConfig = field(default_factory=GateConfig)

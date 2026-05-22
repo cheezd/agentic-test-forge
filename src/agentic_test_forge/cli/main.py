@@ -15,7 +15,15 @@ from agentic_test_forge.mutation.code import (
     MutmutRunError,
     analyze_mutation,
 )
-from agentic_test_forge.reporting.console import print_crap_report, print_mutation_report
+from agentic_test_forge.mutation.gherkin import (
+    GherkinRunError,
+    analyze_gherkin_mutation,
+)
+from agentic_test_forge.reporting.console import (
+    print_crap_report,
+    print_gherkin_mutation_report,
+    print_mutation_report,
+)
 
 app = typer.Typer(
     name="forge",
@@ -143,10 +151,55 @@ def check_cmd(
 
 @app.command("mutate-gherkin")
 def mutate_gherkin(
-    _features: str = typer.Argument("features/", help="Path to .feature files."),
+    path: str = typer.Option("features/", "--path", help="Path to .feature files."),
+    threshold: float | None = typer.Option(
+        None,
+        "--threshold",
+        help="Mutation score threshold percentage (overrides config).",
+    ),
+    base: str | None = typer.Option(
+        None,
+        "--base",
+        help="Git ref for differential diff (overrides config).",
+    ),
+    json_output: str | None = typer.Option(
+        None,
+        "--json",
+        help="Write structured JSON report to this file.",
+    ),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help="Ignore manifest skip logic and mutate all scoped scenarios.",
+    ),
 ) -> None:
     """Mutate Gherkin Examples and run acceptance tests."""
-    _not_implemented("Gherkin mutation", "Phase 4")
+    config = load_config()
+    effective_threshold = threshold if threshold is not None else config.gherkin_threshold
+    effective_base = base if base is not None else config.gherkin_base_ref
+
+    try:
+        report = analyze_gherkin_mutation(
+            [path],
+            threshold=effective_threshold,
+            base_ref=effective_base,
+            manifest_dir=config.manifest_dir,
+            full_run=full,
+            test_cmd=config.gherkin_test_cmd,
+            runner=config.gherkin_runner,
+        )
+    except (GitScopeError, GherkinRunError) as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(code=2) from exc
+
+    print_gherkin_mutation_report(report, console)
+
+    if json_output:
+        Path(json_output).write_text(report.to_json(), encoding="utf-8")
+        console.print(f"JSON report written to [bold]{json_output}[/bold]")
+
+    if report.status == "fail":
+        raise typer.Exit(code=1)
 
 
 def run() -> None:

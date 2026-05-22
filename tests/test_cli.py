@@ -12,6 +12,11 @@ from agentic_test_forge.mutation.code import (
     MutationReport,
     MutationUnavailableError,
 )
+from agentic_test_forge.mutation.gherkin import (
+    GherkinFinding,
+    GherkinMutationReport,
+    GherkinRunError,
+)
 
 runner = CliRunner()
 
@@ -81,9 +86,52 @@ def test_check_stub_exits_not_implemented() -> None:
     assert result.exit_code == NOT_IMPLEMENTED_EXIT
 
 
-def test_mutate_gherkin_stub_exits_not_implemented() -> None:
-    result = runner.invoke(app, ["mutate-gherkin"])
-    assert result.exit_code == NOT_IMPLEMENTED_EXIT
+def test_mutate_gherkin_reports_failure_when_threshold_not_met() -> None:
+    report = GherkinMutationReport(
+        tool="gherkin_mutation",
+        status="fail",
+        threshold=80.0,
+        findings=(
+            GherkinFinding(
+                scenario_id="features/sample.feature::Add",
+                score=50.0,
+                killed=1,
+                total=2,
+                above_threshold=True,
+            ),
+        ),
+        summary="1 scenario(s) below mutation threshold 80.0%.",
+    )
+    with patch("agentic_test_forge.cli.main.analyze_gherkin_mutation", return_value=report):
+        result = runner.invoke(app, ["mutate-gherkin", "--path", "features", "--threshold", "80"])
+    assert result.exit_code == 1
+    assert "FAIL" in result.output
+
+
+def test_mutate_gherkin_run_error_exits_with_error() -> None:
+    with patch(
+        "agentic_test_forge.cli.main.analyze_gherkin_mutation",
+        side_effect=GherkinRunError("behave missing"),
+    ):
+        result = runner.invoke(app, ["mutate-gherkin"])
+    assert result.exit_code == 2
+    assert "behave missing" in result.output
+
+
+def test_mutate_gherkin_json_output(tmp_path: Path) -> None:
+    report = GherkinMutationReport(
+        tool="gherkin_mutation",
+        status="pass",
+        threshold=80.0,
+        findings=(),
+        summary="All clear.",
+    )
+    json_path = tmp_path / "gherkin.json"
+    with patch("agentic_test_forge.cli.main.analyze_gherkin_mutation", return_value=report):
+        result = runner.invoke(app, ["mutate-gherkin", "--json", str(json_path)])
+    assert result.exit_code == 0
+    assert json_path.is_file()
+    assert '"tool": "gherkin_mutation"' in json_path.read_text(encoding="utf-8")
 
 
 def test_mutate_reports_failure_when_threshold_not_met() -> None:

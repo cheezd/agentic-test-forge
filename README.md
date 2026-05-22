@@ -4,14 +4,14 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**Phase 3 (code mutation)** — differential mutmut wrapper in progress on `issue-10-phase-3-code-mutation`.
+**Phase 4 (Gherkin mutation)** — differential Examples mutation in progress on `issue-19-phase-4-gherkin-mutation`.
 
 | Command | Status |
 |---------|--------|
 | `forge crap` | Available |
 | `forge mutate` | Available (Linux/WSL; mutmut does not run natively on Windows) |
+| `forge mutate-gherkin` | Available |
 | `forge check` | Phase 5 |
-| `forge mutate-gherkin` | Phase 4 |
 
 ## Install
 
@@ -31,6 +31,7 @@ pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-for
 forge --help
 forge crap --path src/ --threshold 30
 forge mutate --path src/ --base main --threshold 80
+forge mutate-gherkin --path features/ --base main --threshold 80
 ```
 
 Run tests with coverage before CRAP analysis:
@@ -41,6 +42,8 @@ forge crap --path src/ --threshold 30 --json crap-report.json
 ```
 
 Differential mutation uses git diff against `--base` (default `main`) and skips unchanged files tracked in `.forge/mutation-manifest.json`. Use `--full` to ignore the manifest.
+
+Gherkin mutation mutates Examples table cells in changed `.feature` scenarios, runs the configured acceptance test command, and tracks results in `.forge/gherkin-manifest.json`.
 
 Configure per-project thresholds in `pyproject.toml`:
 
@@ -53,6 +56,10 @@ manifest_dir = ".forge"
 mutation_threshold = 80
 mutation_base_ref = "main"
 mutation_test_cmd = "pytest"
+gherkin_threshold = 80
+gherkin_base_ref = "main"
+gherkin_test_cmd = "behave"
+gherkin_runner = "behave"  # behave | pytest
 
 [tool.forge.gates]
 crap = true
@@ -79,7 +86,7 @@ See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 
 1. Foundation & CLI shell — done
 2. CRAP analyzer (radon + coverage.py) — done
-3. Differential code mutation (mutmut) — in progress
-4. Gherkin mutation
+3. Differential code mutation (mutmut) — done
+4. Gherkin mutation — in progress
 5. Quality gate orchestrator (`forge check`)
 6. DRY flagging, consumer CI guide, polish
