@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from agentic_test_forge.analysis.crap import CoverageDataMissingError, CrapReport
+from agentic_test_forge.analysis.dry import DryReport
 from agentic_test_forge.config.models import ForgeConfig, GateConfig
 from agentic_test_forge.mutation.code import MutationUnavailableError
 from agentic_test_forge.mutation.code.report import MutationReport
@@ -12,7 +13,9 @@ from agentic_test_forge.orchestration.check import run_quality_check
 
 
 def test_run_quality_check_with_no_gates_enabled() -> None:
-    config = ForgeConfig(gates=GateConfig(crap=False, mutation=False, gherkin=False))
+    config = ForgeConfig(
+        gates=GateConfig(crap=False, mutation=False, gherkin=False, dry=False),
+    )
     report = run_quality_check(config)
     assert report.status == "pass"
     assert report.gates_run == ()
@@ -74,3 +77,19 @@ def test_run_quality_check_records_mutation_unavailable() -> None:
         report = run_quality_check(config, paths=["src"])
 
     assert "mutation: mutmut unavailable" in report.errors
+
+
+def test_run_quality_check_runs_dry_gate() -> None:
+    config = ForgeConfig(gates=GateConfig(dry=True))
+    dry = DryReport(
+        tool="dry",
+        status="pass",
+        findings=(),
+        summary="clean",
+    )
+    with patch("agentic_test_forge.orchestration.check.analyze_dry", return_value=dry):
+        report = run_quality_check(config, paths=["src"])
+
+    assert report.dry == dry
+    assert report.gates_run == ("dry",)
+    assert report.status == "pass"

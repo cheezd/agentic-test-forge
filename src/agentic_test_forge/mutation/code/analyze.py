@@ -36,6 +36,7 @@ def analyze_mutation(
     search_root: Path | None = None,
     full_run: bool = False,
     run_mutmut_tool: bool = True,
+    test_cmd: str = "pytest",
 ) -> MutationReport:
     """Run differential mutation analysis and return a structured report."""
     root = (search_root or Path.cwd()).resolve()
@@ -66,7 +67,7 @@ def analyze_mutation(
 
     if run_mutmut_tool:
         try:
-            with temporary_mutmut_paths(root, relative_paths):
+            with temporary_mutmut_paths(root, relative_paths, test_cmd=test_cmd):
                 run_mutmut(root)
         except (MutationUnavailableError, MutmutRunError, GitScopeError):
             raise

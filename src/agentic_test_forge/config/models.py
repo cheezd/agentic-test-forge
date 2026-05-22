@@ -16,6 +16,7 @@ class GateConfig:
     crap: bool = False
     mutation: bool = False
     gherkin: bool = False
+    dry: bool = False
 
 
 @dataclass(frozen=True)

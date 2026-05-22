@@ -36,6 +36,16 @@ def test_temporary_mutmut_paths_restores_pyproject(tmp_path: Path) -> None:
     assert restored == "[project]\nname = \"demo\"\n"
 
 
+def test_temporary_mutmut_paths_sets_runner_when_test_cmd_provided(tmp_path: Path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[project]\nname = \"demo\"\n", encoding="utf-8")
+
+    with temporary_mutmut_paths(tmp_path, ["src/example.py"], test_cmd="python -m pytest"):
+        updated = pyproject.read_text(encoding="utf-8")
+        assert "runner" in updated
+        assert "python -m pytest" in updated
+
+
 def test_run_mutmut_raises_when_command_fails(tmp_path: Path) -> None:
     with (
         patch(

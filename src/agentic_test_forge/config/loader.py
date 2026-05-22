@@ -50,6 +50,7 @@ def _parse_gates(raw: dict[str, Any]) -> GateConfig:
         crap=bool(gates_raw.get("crap", _DEFAULTS.gates.crap)),
         mutation=bool(gates_raw.get("mutation", _DEFAULTS.gates.mutation)),
         gherkin=bool(gates_raw.get("gherkin", _DEFAULTS.gates.gherkin)),
+        dry=bool(gates_raw.get("dry", _DEFAULTS.gates.dry)),
     )
 
 
