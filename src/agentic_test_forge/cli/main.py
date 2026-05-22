@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 from rich.console import Console
+
+from agentic_test_forge.analysis.crap import CoverageDataMissingError, analyze_crap
+from agentic_test_forge.config import load_config
+from agentic_test_forge.reporting.console import print_crap_report
 
 app = typer.Typer(
     name="forge",
@@ -24,15 +30,46 @@ def _not_implemented(feature: str, phase: str) -> None:
 
 @app.command()
 def crap(
-    _threshold: float | None = typer.Option(
+    threshold: float | None = typer.Option(
         None,
         "--threshold",
         help="CRAP score threshold (overrides config).",
     ),
-    _path: str = typer.Option("src/", "--path", help="Path to analyze."),
+    path: str = typer.Option("src/", "--path", help="Path to analyze."),
+    json_output: str | None = typer.Option(
+        None,
+        "--json",
+        help="Write structured JSON report to this file.",
+    ),
+    coverage_file: str = typer.Option(
+        ".coverage",
+        "--coverage-file",
+        help="Path to coverage.py data file.",
+    ),
 ) -> None:
     """Analyze cyclomatic complexity and coverage (CRAP scores)."""
-    _not_implemented("CRAP analyzer", "Phase 2")
+    config = load_config()
+    effective_threshold = threshold if threshold is not None else config.crap_threshold
+
+    try:
+        report = analyze_crap(
+            [path],
+            threshold=effective_threshold,
+            formula=config.crap_formula,
+            coverage_file=coverage_file,
+        )
+    except CoverageDataMissingError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    print_crap_report(report, console)
+
+    if json_output:
+        Path(json_output).write_text(report.to_json(), encoding="utf-8")
+        console.print(f"JSON report written to [bold]{json_output}[/bold]")
+
+    if report.status == "fail":
+        raise typer.Exit(code=1)
 
 
 @app.command("check")
