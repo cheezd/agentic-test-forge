@@ -33,4 +33,5 @@ class ForgeConfig:
     gherkin_base_ref: str = "main"
     gherkin_test_cmd: str = "behave"
     gherkin_runner: GherkinRunner = "behave"
+    gherkin_paths: list[str] = field(default_factory=lambda: ["features"])
     gates: GateConfig = field(default_factory=GateConfig)

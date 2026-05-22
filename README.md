@@ -4,14 +4,14 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**Phase 4 (Gherkin mutation)** — differential Examples mutation in progress on `issue-19-phase-4-gherkin-mutation`.
+**Phase 5 (quality gate)** — `forge check` orchestrator on `issue-21-phase-5-orchestrator`.
 
 | Command | Status |
 |---------|--------|
 | `forge crap` | Available |
 | `forge mutate` | Available (Linux/WSL; mutmut does not run natively on Windows) |
 | `forge mutate-gherkin` | Available |
-| `forge check` | Phase 5 |
+| `forge check` | Available |
 
 ## Install
 
@@ -32,13 +32,14 @@ forge --help
 forge crap --path src/ --threshold 30
 forge mutate --path src/ --base main --threshold 80
 forge mutate-gherkin --path features/ --base main --threshold 80
+forge check --path src/ --features-path features/
 ```
 
-Run tests with coverage before CRAP analysis:
+Run tests with coverage, then the full quality gate:
 
 ```bash
 pytest --cov=src
-forge crap --path src/ --threshold 30 --json crap-report.json
+forge check --path src/ --json report.json
 ```
 
 Differential mutation uses git diff against `--base` (default `main`) and skips unchanged files tracked in `.forge/mutation-manifest.json`. Use `--full` to ignore the manifest.
@@ -60,6 +61,7 @@ gherkin_threshold = 80
 gherkin_base_ref = "main"
 gherkin_test_cmd = "behave"
 gherkin_runner = "behave"  # behave | pytest
+gherkin_paths = ["features"]
 
 [tool.forge.gates]
 crap = true
@@ -87,6 +89,6 @@ See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 1. Foundation & CLI shell — done
 2. CRAP analyzer (radon + coverage.py) — done
 3. Differential code mutation (mutmut) — done
-4. Gherkin mutation — in progress
-5. Quality gate orchestrator (`forge check`)
+4. Gherkin mutation — done
+5. Quality gate orchestrator (`forge check`) — in progress
 6. DRY flagging, consumer CI guide, polish

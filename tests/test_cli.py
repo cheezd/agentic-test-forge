@@ -6,7 +6,8 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from agentic_test_forge.analysis.crap import CoverageDataMissingError, CrapFinding, CrapReport
-from agentic_test_forge.cli.main import NOT_IMPLEMENTED_EXIT, app
+from agentic_test_forge.cli.main import app
+from agentic_test_forge.config.models import ForgeConfig, GateConfig
 from agentic_test_forge.mutation.code import (
     MutationFinding,
     MutationReport,
@@ -17,6 +18,7 @@ from agentic_test_forge.mutation.gherkin import (
     GherkinMutationReport,
     GherkinRunError,
 )
+from agentic_test_forge.orchestration.report import CheckReport
 
 runner = CliRunner()
 
@@ -81,9 +83,62 @@ def test_crap_json_output(tmp_path: Path) -> None:
     assert '"tool": "crap"' in json_path.read_text(encoding="utf-8")
 
 
-def test_check_stub_exits_not_implemented() -> None:
-    result = runner.invoke(app, ["check"])
-    assert result.exit_code == NOT_IMPLEMENTED_EXIT
+def test_check_passes_when_all_enabled_gates_pass(tmp_path: Path) -> None:
+    report = CheckReport(
+        tool="check",
+        status="pass",
+        summary="All enabled quality gates passed (crap).",
+        gates_run=("crap",),
+    )
+    config = ForgeConfig(gates=GateConfig(crap=True, mutation=False, gherkin=False))
+    with (
+        patch("agentic_test_forge.cli.main.load_config", return_value=config),
+        patch("agentic_test_forge.cli.main.run_quality_check", return_value=report),
+    ):
+        result = runner.invoke(app, ["check"])
+    assert result.exit_code == 0
+    assert "PASS" in result.output
+
+
+def test_check_fails_when_gate_fails() -> None:
+    report = CheckReport(
+        tool="check",
+        status="fail",
+        summary="Quality gate failed: crap.",
+        gates_run=("crap",),
+    )
+    with patch("agentic_test_forge.cli.main.run_quality_check", return_value=report):
+        result = runner.invoke(app, ["check"])
+    assert result.exit_code == 1
+
+
+def test_check_exits_with_error_on_tool_failure() -> None:
+    report = CheckReport(
+        tool="check",
+        status="pass",
+        summary="Quality gate completed with tool error(s): 1.",
+        gates_run=("mutation",),
+        errors=("mutation: mutmut unavailable",),
+    )
+    with patch("agentic_test_forge.cli.main.run_quality_check", return_value=report):
+        result = runner.invoke(app, ["check"])
+    assert result.exit_code == 2
+    assert "mutmut unavailable" in result.output
+
+
+def test_check_json_output(tmp_path: Path) -> None:
+    report = CheckReport(
+        tool="check",
+        status="pass",
+        summary="All clear.",
+        gates_run=(),
+    )
+    json_path = tmp_path / "check.json"
+    with patch("agentic_test_forge.cli.main.run_quality_check", return_value=report):
+        result = runner.invoke(app, ["check", "--json", str(json_path)])
+    assert result.exit_code == 0
+    assert json_path.is_file()
+    assert '"tool": "check"' in json_path.read_text(encoding="utf-8")
 
 
 def test_mutate_gherkin_reports_failure_when_threshold_not_met() -> None:

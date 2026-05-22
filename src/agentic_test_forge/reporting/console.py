@@ -8,6 +8,7 @@ from rich.table import Table
 from agentic_test_forge.analysis.crap import CrapReport
 from agentic_test_forge.mutation.code.report import MutationReport
 from agentic_test_forge.mutation.gherkin.report import GherkinMutationReport
+from agentic_test_forge.orchestration.report import CheckReport
 
 
 def print_crap_report(report: CrapReport, console: Console) -> None:
@@ -76,6 +77,27 @@ def print_mutation_report(report: MutationReport, console: Console) -> None:
         )
 
     console.print(table)
+
+
+def print_check_report(report: CheckReport, console: Console) -> None:
+    """Render a combined quality gate report."""
+    status_style = "green" if report.status == "pass" and not report.errors else "red"
+    if report.errors and report.status == "pass":
+        label = "ERROR"
+    else:
+        label = report.status.upper()
+    console.print(f"[bold]Quality gate[/bold] — [{status_style}]{label}[/{status_style}]")
+    console.print(report.summary)
+
+    if report.crap is not None:
+        console.print()
+        print_crap_report(report.crap, console)
+    if report.mutation is not None:
+        console.print()
+        print_mutation_report(report.mutation, console)
+    if report.gherkin is not None:
+        console.print()
+        print_gherkin_mutation_report(report.gherkin, console)
 
 
 def print_gherkin_mutation_report(report: GherkinMutationReport, console: Console) -> None:
