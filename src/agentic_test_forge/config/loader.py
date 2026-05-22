@@ -65,11 +65,19 @@ def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
 
     manifest_dir = str(raw.get("manifest_dir", _DEFAULTS.manifest_dir))
 
+    mutation_threshold_raw = raw.get("mutation_threshold", _DEFAULTS.mutation_threshold)
+    mutation_threshold = float(mutation_threshold_raw)
+    mutation_base_ref = str(raw.get("mutation_base_ref", _DEFAULTS.mutation_base_ref))
+    mutation_test_cmd = str(raw.get("mutation_test_cmd", _DEFAULTS.mutation_test_cmd))
+
     return ForgeConfig(
         paths=paths_list,
         crap_threshold=threshold,
         crap_formula=formula,
         manifest_dir=manifest_dir,
+        mutation_threshold=mutation_threshold,
+        mutation_base_ref=mutation_base_ref,
+        mutation_test_cmd=mutation_test_cmd,
         gates=_parse_gates(raw),
     )
 

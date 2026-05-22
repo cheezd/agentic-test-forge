@@ -83,6 +83,23 @@
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "justMyCode": false
+    },
+    {
+      "name": "forge: mutate (dry run via mock)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/agentic_test_forge/cli/main.py",
+      "args": [
+        "mutate",
+        "--path",
+        "src/agentic_test_forge",
+        "--full",
+        "--threshold",
+        "80"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
     }
   ]
 }

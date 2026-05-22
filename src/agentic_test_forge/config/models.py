@@ -25,4 +25,7 @@ class ForgeConfig:
     crap_threshold: float = 30.0
     crap_formula: CrapFormula = "standard"
     manifest_dir: str = ".forge"
+    mutation_threshold: float = 80.0
+    mutation_base_ref: str = "main"
+    mutation_test_cmd: str = "pytest"
     gates: GateConfig = field(default_factory=GateConfig)

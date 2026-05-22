@@ -9,7 +9,13 @@ from rich.console import Console
 
 from agentic_test_forge.analysis.crap import CoverageDataMissingError, analyze_crap
 from agentic_test_forge.config import load_config
-from agentic_test_forge.reporting.console import print_crap_report
+from agentic_test_forge.mutation.code import (
+    GitScopeError,
+    MutationUnavailableError,
+    MutmutRunError,
+    analyze_mutation,
+)
+from agentic_test_forge.reporting.console import print_crap_report, print_mutation_report
 
 app = typer.Typer(
     name="forge",
@@ -63,6 +69,57 @@ def crap(
         raise typer.Exit(code=1) from exc
 
     print_crap_report(report, console)
+
+    if json_output:
+        Path(json_output).write_text(report.to_json(), encoding="utf-8")
+        console.print(f"JSON report written to [bold]{json_output}[/bold]")
+
+    if report.status == "fail":
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def mutate(
+    threshold: float | None = typer.Option(
+        None,
+        "--threshold",
+        help="Mutation score threshold percentage (overrides config).",
+    ),
+    path: str = typer.Option("src/", "--path", help="Path roots to analyze."),
+    base: str | None = typer.Option(
+        None,
+        "--base",
+        help="Git ref for differential diff (overrides config).",
+    ),
+    json_output: str | None = typer.Option(
+        None,
+        "--json",
+        help="Write structured JSON report to this file.",
+    ),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help="Ignore manifest skip logic and mutate all scoped Python files.",
+    ),
+) -> None:
+    """Run differential code mutation testing (mutmut)."""
+    config = load_config()
+    effective_threshold = threshold if threshold is not None else config.mutation_threshold
+    effective_base = base if base is not None else config.mutation_base_ref
+
+    try:
+        report = analyze_mutation(
+            [path],
+            threshold=effective_threshold,
+            base_ref=effective_base,
+            manifest_dir=config.manifest_dir,
+            full_run=full,
+        )
+    except (GitScopeError, MutationUnavailableError, MutmutRunError) as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(code=2) from exc
+
+    print_mutation_report(report, console)
 
     if json_output:
         Path(json_output).write_text(report.to_json(), encoding="utf-8")
