@@ -19,7 +19,9 @@ from agentic_test_forge.mutation.gherkin import (
     GherkinRunError,
     analyze_gherkin_mutation,
 )
+from agentic_test_forge.orchestration import run_quality_check
 from agentic_test_forge.reporting.console import (
+    print_check_report,
     print_crap_report,
     print_gherkin_mutation_report,
     print_mutation_report,
@@ -31,15 +33,6 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console(stderr=True)
-
-NOT_IMPLEMENTED_EXIT = 2
-
-
-def _not_implemented(feature: str, phase: str) -> None:
-    console.print(
-        f"[yellow]{feature}[/yellow] is not implemented yet (planned: {phase}).",
-    )
-    raise typer.Exit(code=NOT_IMPLEMENTED_EXIT)
 
 
 @app.command()
@@ -139,14 +132,57 @@ def mutate(
 
 @app.command("check")
 def check_cmd(
-    _json_output: str | None = typer.Option(
+    path: str = typer.Option("src/", "--path", help="Path roots for CRAP and code mutation."),
+    features_path: str = typer.Option(
+        "features/",
+        "--features-path",
+        help="Path to .feature files for Gherkin mutation gate.",
+    ),
+    coverage_file: str = typer.Option(
+        ".coverage",
+        "--coverage-file",
+        help="Path to coverage.py data file for CRAP gate.",
+    ),
+    base: str | None = typer.Option(
+        None,
+        "--base",
+        help="Git ref for differential mutation scope (overrides config).",
+    ),
+    json_output: str | None = typer.Option(
         None,
         "--json",
         help="Write structured JSON report to this file.",
     ),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help="Ignore manifest skip logic for mutation gates.",
+    ),
 ) -> None:
-    """Run the full quality gate (coverage -> CRAP -> mutation)."""
-    _not_implemented("Quality gate orchestrator", "Phase 5")
+    """Run the full quality gate (CRAP -> mutation -> Gherkin)."""
+    config = load_config()
+    report = run_quality_check(
+        config,
+        paths=[path],
+        gherkin_paths=[features_path],
+        coverage_file=coverage_file,
+        base_ref=base,
+        full_run=full,
+    )
+
+    print_check_report(report, console)
+
+    if json_output:
+        Path(json_output).write_text(report.to_json(), encoding="utf-8")
+        console.print(f"JSON report written to [bold]{json_output}[/bold]")
+
+    if report.errors:
+        for error in report.errors:
+            console.print(f"[red]Error:[/red] {error}")
+        raise typer.Exit(code=2)
+
+    if report.status == "fail":
+        raise typer.Exit(code=1)
 
 
 @app.command("mutate-gherkin")

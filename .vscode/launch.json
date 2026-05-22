@@ -117,6 +117,22 @@
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "justMyCode": false
+    },
+    {
+      "name": "forge: check",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/agentic_test_forge/cli/main.py",
+      "args": [
+        "check",
+        "--path",
+        "src/agentic_test_forge",
+        "--features-path",
+        "tests/fixtures/gherkin_sample/features"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
     }
   ]
 }

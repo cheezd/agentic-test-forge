@@ -82,6 +82,14 @@ def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
     runner_raw = str(raw.get("gherkin_runner", _DEFAULTS.gherkin_runner))
     gherkin_runner: GherkinRunner = "pytest" if runner_raw == "pytest" else "behave"
 
+    gherkin_paths_raw = raw.get("gherkin_paths", _DEFAULTS.gherkin_paths)
+    if isinstance(gherkin_paths_raw, str):
+        gherkin_paths_list = [gherkin_paths_raw]
+    elif isinstance(gherkin_paths_raw, list):
+        gherkin_paths_list = [str(p) for p in gherkin_paths_raw]
+    else:
+        gherkin_paths_list = list(_DEFAULTS.gherkin_paths)
+
     return ForgeConfig(
         paths=paths_list,
         crap_threshold=threshold,
@@ -94,6 +102,7 @@ def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
         gherkin_base_ref=gherkin_base_ref,
         gherkin_test_cmd=gherkin_test_cmd,
         gherkin_runner=gherkin_runner,
+        gherkin_paths=gherkin_paths_list,
         gates=_parse_gates(raw),
     )
 

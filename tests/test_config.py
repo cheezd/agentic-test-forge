@@ -81,4 +81,5 @@ def test_load_config_defaults_when_missing(tmp_path: Path) -> None:
     assert config.gherkin_base_ref == "main"
     assert config.gherkin_test_cmd == "behave"
     assert config.gherkin_runner == "behave"
+    assert config.gherkin_paths == ["features"]
     assert config.gates.crap is False
