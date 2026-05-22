@@ -1,0 +1,28 @@
+"""Configuration models for [tool.forge]."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Literal
+
+CrapFormula = Literal["standard", "simplified"]
+
+
+@dataclass(frozen=True)
+class GateConfig:
+    """Which quality gates are enabled in forge check."""
+
+    crap: bool = False
+    mutation: bool = False
+    gherkin: bool = False
+
+
+@dataclass(frozen=True)
+class ForgeConfig:
+    """Resolved forge configuration for a consumer project."""
+
+    paths: list[str] = field(default_factory=lambda: ["src"])
+    crap_threshold: float = 30.0
+    crap_formula: CrapFormula = "standard"
+    manifest_dir: str = ".forge"
+    gates: GateConfig = field(default_factory=GateConfig)
