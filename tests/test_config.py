@@ -14,6 +14,13 @@ paths = ["lib"]
 crap_threshold = 12
 crap_formula = "simplified"
 manifest_dir = ".forge-cache"
+mutation_threshold = 90
+mutation_base_ref = "develop"
+mutation_test_cmd = "python -m pytest"
+gherkin_threshold = 75
+gherkin_base_ref = "develop"
+gherkin_test_cmd = "behave --no-capture"
+gherkin_runner = "pytest"
 
 [tool.forge.gates]
 crap = true
@@ -29,6 +36,13 @@ gherkin = false
     assert config.crap_threshold == 12.0
     assert config.crap_formula == "simplified"
     assert config.manifest_dir == ".forge-cache"
+    assert config.mutation_threshold == 90.0
+    assert config.mutation_base_ref == "develop"
+    assert config.mutation_test_cmd == "python -m pytest"
+    assert config.gherkin_threshold == 75.0
+    assert config.gherkin_base_ref == "develop"
+    assert config.gherkin_test_cmd == "behave --no-capture"
+    assert config.gherkin_runner == "pytest"
     assert config.gates.crap is True
     assert config.gates.mutation is True
     assert config.gates.gherkin is False
@@ -60,4 +74,11 @@ def test_load_config_defaults_when_missing(tmp_path: Path) -> None:
     assert config.paths == ["src"]
     assert config.crap_threshold == 30.0
     assert config.crap_formula == "standard"
+    assert config.mutation_threshold == 80.0
+    assert config.mutation_base_ref == "main"
+    assert config.mutation_test_cmd == "pytest"
+    assert config.gherkin_threshold == 80.0
+    assert config.gherkin_base_ref == "main"
+    assert config.gherkin_test_cmd == "behave"
+    assert config.gherkin_runner == "behave"
     assert config.gates.crap is False

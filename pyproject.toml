@@ -21,7 +21,11 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "coverage>=7.4",
+    "mutmut>=3.0",
+    "radon>=6.0",
     "rich>=13.7",
+    "tomli-w>=1.0",
     "typer>=0.12",
 ]
 
@@ -46,6 +50,7 @@ packages = ["src/agentic_test_forge"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+norecursedirs = ["fixtures", ".git", ".tox", "dist", "build"]
 
 [tool.ruff]
 line-length = 100
@@ -62,6 +67,10 @@ warn_return_any = true
 warn_unused_configs = true
 packages = ["agentic_test_forge"]
 
+[[tool.mypy.overrides]]
+module = ["radon.*", "mutmut.*", "tomli_w.*"]
+ignore_missing_imports = true
+
 [tool.coverage.run]
 source = ["agentic_test_forge"]
 branch = true
@@ -75,6 +84,13 @@ paths = ["src/agentic_test_forge"]
 crap_threshold = 30
 crap_formula = "standard"
 manifest_dir = ".forge"
+mutation_threshold = 80
+mutation_base_ref = "main"
+mutation_test_cmd = "pytest"
+gherkin_threshold = 80
+gherkin_base_ref = "main"
+gherkin_test_cmd = "behave"
+gherkin_runner = "behave"
 
 [tool.forge.gates]
 crap = false

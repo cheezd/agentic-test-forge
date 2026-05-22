@@ -1,0 +1,122 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "justMyCode": true
+    },
+    {
+      "name": "Python: Pytest (all)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests", "-v"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "justMyCode": false
+    },
+    {
+      "name": "Python: Pytest (current file)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-v"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "justMyCode": false
+    },
+    {
+      "name": "forge: crap",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/agentic_test_forge/cli/main.py",
+      "args": [
+        "crap",
+        "--path",
+        "src/agentic_test_forge",
+        "--threshold",
+        "30"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    },
+    {
+      "name": "forge: crap (fixture sample)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/agentic_test_forge/cli/main.py",
+      "args": [
+        "crap",
+        "--path",
+        "tests/fixtures/crap_sample/src",
+        "--coverage-file",
+        "tests/fixtures/crap_sample/.coverage",
+        "--threshold",
+        "6"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Fixture: generate crap_sample coverage",
+      "justMyCode": false
+    },
+    {
+      "name": "forge: --help",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/agentic_test_forge/cli/main.py",
+      "args": ["--help"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    },
+    {
+      "name": "forge: mutate (dry run via mock)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/agentic_test_forge/cli/main.py",
+      "args": [
+        "mutate",
+        "--path",
+        "src/agentic_test_forge",
+        "--full",
+        "--threshold",
+        "80"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    },
+    {
+      "name": "forge: mutate-gherkin",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/agentic_test_forge/cli/main.py",
+      "args": [
+        "mutate-gherkin",
+        "--path",
+        "tests/fixtures/gherkin_sample/features",
+        "--full",
+        "--threshold",
+        "80"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    }
+  ]
+}
