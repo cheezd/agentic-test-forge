@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from agentic_test_forge.analysis.crap import CrapReport
+from agentic_test_forge.mutation.code.report import MutationReport
 
 
 def print_crap_report(report: CrapReport, console: Console) -> None:
@@ -32,6 +33,44 @@ def print_crap_report(report: CrapReport, console: Console) -> None:
             f"{finding.complexity:.0f}",
             f"{finding.coverage:.0%}",
             f"{finding.crap_score:.2f}",
+            flag,
+        )
+
+    console.print(table)
+
+
+def print_mutation_report(report: MutationReport, console: Console) -> None:
+    """Render a human-readable mutation report."""
+    status_style = "green" if report.status == "pass" else "red"
+    status = report.status.upper()
+    console.print(
+        f"[bold]Mutation analysis[/bold] — [{status_style}]{status}[/{status_style}]",
+    )
+    console.print(report.summary)
+
+    if report.skipped_unchanged:
+        skipped_count = len(report.skipped_unchanged)
+        console.print(
+            f"[dim]{skipped_count} file(s) skipped (unchanged manifest hash).[/dim]",
+        )
+
+    if not report.findings:
+        return
+
+    table = Table(title="File mutation scores")
+    table.add_column("File")
+    table.add_column("Killed", justify="right")
+    table.add_column("Total", justify="right")
+    table.add_column("Score", justify="right")
+    table.add_column("Flag", justify="center")
+
+    for finding in report.findings:
+        flag = "[red]FAIL[/red]" if finding.above_threshold else "[green]ok[/green]"
+        table.add_row(
+            finding.filepath,
+            str(finding.killed),
+            str(finding.total),
+            f"{finding.score:.1f}%",
             flag,
         )
 

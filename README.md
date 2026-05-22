@@ -4,11 +4,12 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**Phase 1 (foundation)** — CLI shell, config loader, and project skeleton. Feature commands are stubs until later phases.
+**Phase 3 (code mutation)** — differential mutmut wrapper in progress on `issue-10-phase-3-code-mutation`.
 
 | Command | Status |
 |---------|--------|
-| `forge crap` | Phase 2 (current) |
+| `forge crap` | Available |
+| `forge mutate` | Available (Linux/WSL; mutmut does not run natively on Windows) |
 | `forge check` | Phase 5 |
 | `forge mutate-gherkin` | Phase 4 |
 
@@ -29,6 +30,7 @@ pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-for
 ```bash
 forge --help
 forge crap --path src/ --threshold 30
+forge mutate --path src/ --base main --threshold 80
 ```
 
 Run tests with coverage before CRAP analysis:
@@ -38,6 +40,8 @@ pytest --cov=src
 forge crap --path src/ --threshold 30 --json crap-report.json
 ```
 
+Differential mutation uses git diff against `--base` (default `main`) and skips unchanged files tracked in `.forge/mutation-manifest.json`. Use `--full` to ignore the manifest.
+
 Configure per-project thresholds in `pyproject.toml`:
 
 ```toml
@@ -46,6 +50,9 @@ paths = ["src"]
 crap_threshold = 30
 crap_formula = "standard"  # standard | simplified
 manifest_dir = ".forge"
+mutation_threshold = 80
+mutation_base_ref = "main"
+mutation_test_cmd = "pytest"
 
 [tool.forge.gates]
 crap = true
@@ -70,9 +77,9 @@ See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 
 ## Roadmap
 
-1. Foundation & CLI shell *(current)*
-2. CRAP analyzer (radon + coverage.py)
-3. Differential code mutation (mutmut)
+1. Foundation & CLI shell — done
+2. CRAP analyzer (radon + coverage.py) — done
+3. Differential code mutation (mutmut) — in progress
 4. Gherkin mutation
 5. Quality gate orchestrator (`forge check`)
 6. DRY flagging, consumer CI guide, polish

@@ -15,6 +15,7 @@ htmlcov/
 .ruff_cache/
 .pytest_cache/
 .forge/
+mutants/
 
 # Local project-management artifacts (see workspace/GH-*/)
 workspace/
