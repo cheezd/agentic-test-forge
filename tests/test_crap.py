@@ -16,6 +16,7 @@ from agentic_test_forge.analysis.crap import (
 )
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "crap_sample"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_compute_crap_score_standard() -> None:
@@ -35,6 +36,16 @@ def test_analyze_crap_missing_coverage(tmp_path: Path) -> None:
         analyze_crap([module], threshold=30, search_root=tmp_path)
 
 
+def _venv_python() -> Path:
+    windows = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
+    if windows.is_file():
+        return windows
+    unix = PROJECT_ROOT / ".venv" / "bin" / "python"
+    if unix.is_file():
+        return unix
+    return Path(sys.executable)
+
+
 def _run_fixture_coverage() -> Path:
     coverage_file = FIXTURE_ROOT / ".coverage"
     if coverage_file.exists():
@@ -43,12 +54,14 @@ def _run_fixture_coverage() -> Path:
     env["PYTHONPATH"] = str(FIXTURE_ROOT / "src")
     subprocess.run(
         [
-            sys.executable,
+            str(_venv_python()),
             "-m",
             "pytest",
             "tests",
             "--cov=src",
             "-q",
+            "--rootdir",
+            str(FIXTURE_ROOT),
         ],
         cwd=FIXTURE_ROOT,
         env=env,

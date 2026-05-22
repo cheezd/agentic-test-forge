@@ -1,0 +1,79 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: create venv and install dev deps",
+      "type": "shell",
+      "command": "python -m venv .venv; .\\.venv\\Scripts\\python.exe -m pip install -e \".[dev]\"",
+      "windows": {
+        "command": "python -m venv .venv; .\\.venv\\Scripts\\python.exe -m pip install -e \".[dev]\""
+      },
+      "linux": {
+        "command": "python3 -m venv .venv && .venv/bin/python -m pip install -e \".[dev]\""
+      },
+      "osx": {
+        "command": "python3 -m venv .venv && .venv/bin/python -m pip install -e \".[dev]\""
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Fixture: generate crap_sample coverage",
+      "type": "shell",
+      "command": "$env:PYTHONPATH='src'; ..\\..\\..\\.venv\\Scripts\\python.exe -m pytest tests --cov=src -q",
+      "options": {
+        "cwd": "${workspaceFolder}/tests/fixtures/crap_sample"
+      },
+      "windows": {
+        "command": "$env:PYTHONPATH='src'; ..\\..\\..\\.venv\\Scripts\\python.exe -m pytest tests --cov=src -q",
+        "options": {
+          "cwd": "${workspaceFolder}/tests/fixtures/crap_sample"
+        }
+      },
+      "linux": {
+        "command": "PYTHONPATH=src ../../../.venv/bin/python -m pytest tests --cov=src -q",
+        "options": {
+          "cwd": "${workspaceFolder}/tests/fixtures/crap_sample"
+        }
+      },
+      "osx": {
+        "command": "PYTHONPATH=src ../../../.venv/bin/python -m pytest tests --cov=src -q",
+        "options": {
+          "cwd": "${workspaceFolder}/tests/fixtures/crap_sample"
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: pytest",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest tests -v",
+      "windows": {
+        "command": ".\\.venv\\Scripts\\python.exe -m pytest tests -v"
+      },
+      "linux": {
+        "command": ".venv/bin/python -m pytest tests -v"
+      },
+      "osx": {
+        "command": ".venv/bin/python -m pytest tests -v"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
