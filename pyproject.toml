@@ -21,6 +21,8 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "coverage>=7.4",
+    "radon>=6.0",
     "rich>=13.7",
     "typer>=0.12",
 ]
@@ -46,6 +48,7 @@ packages = ["src/agentic_test_forge"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+norecursedirs = ["fixtures", ".git", ".tox", "dist", "build"]
 
 [tool.ruff]
 line-length = 100
@@ -61,6 +64,10 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 packages = ["agentic_test_forge"]
+
+[[tool.mypy.overrides]]
+module = ["radon.*"]
+ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["agentic_test_forge"]

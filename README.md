@@ -8,7 +8,7 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 | Command | Status |
 |---------|--------|
-| `forge crap` | Phase 2 |
+| `forge crap` | Phase 2 (current) |
 | `forge check` | Phase 5 |
 | `forge mutate-gherkin` | Phase 4 |
 
@@ -28,6 +28,14 @@ pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-for
 
 ```bash
 forge --help
+forge crap --path src/ --threshold 30
+```
+
+Run tests with coverage before CRAP analysis:
+
+```bash
+pytest --cov=src
+forge crap --path src/ --threshold 30 --json crap-report.json
 ```
 
 Configure per-project thresholds in `pyproject.toml`:
