@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from agentic_test_forge.errors import ForgeToolError
 from agentic_test_forge.manifest.store import (
     file_content_hash,
     load_manifest,
     manifest_path,
 )
-
-
-class GitScopeError(ForgeToolError):
-    """Raised when git-based differential scope cannot be resolved."""
+from agentic_test_forge.scope import (
+    filter_git_changed_files,
+    iter_files_by_suffix,
+    normalize_paths,
+    resolve_search_root,
+    run_git_diff_names,
+)
 
 
 @dataclass(frozen=True)
@@ -27,53 +28,6 @@ class ScopeResult:
     base_ref: str
 
 
-def _run_git_diff(base_ref: str, search_root: Path) -> list[str]:
-    try:
-        completed = subprocess.run(
-            ["git", "diff", "--name-only", f"{base_ref}...HEAD"],
-            cwd=search_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except FileNotFoundError as exc:
-        msg = "git executable not found; required for differential mutation scope."
-        raise GitScopeError(msg) from exc
-    except subprocess.CalledProcessError as exc:
-        msg = f"git diff failed for base ref '{base_ref}': {exc.stderr.strip()}"
-        raise GitScopeError(msg) from exc
-    return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
-
-
-def _normalize_paths(paths: list[str | Path], search_root: Path) -> list[Path]:
-    normalized: list[Path] = []
-    for raw in paths:
-        candidate = Path(raw)
-        resolved = candidate if candidate.is_absolute() else (search_root / candidate)
-        normalized.append(resolved.resolve())
-    return normalized
-
-
-def _is_under_any(path: Path, roots: list[Path]) -> bool:
-    for root in roots:
-        try:
-            path.relative_to(root)
-            return True
-        except ValueError:
-            continue
-    return False
-
-
-def _collect_python_files(roots: list[Path]) -> list[Path]:
-    files: list[Path] = []
-    for root in roots:
-        if root.is_file() and root.suffix == ".py":
-            files.append(root.resolve())
-        elif root.is_dir():
-            files.extend(sorted(p.resolve() for p in root.rglob("*.py")))
-    return files
-
-
 def resolve_mutation_scope(
     paths: list[str | Path],
     *,
@@ -83,20 +37,23 @@ def resolve_mutation_scope(
     full_run: bool = False,
 ) -> ScopeResult:
     """Return Python files to mutate, applying git diff and manifest filters."""
-    root = (search_root or Path.cwd()).resolve()
-    path_roots = _normalize_paths([str(p) for p in paths], root)
+    root = resolve_search_root(search_root)
+    path_roots = normalize_paths([str(p) for p in paths], root)
 
     if full_run:
-        candidate_files = _collect_python_files(path_roots)
+        candidate_files = iter_files_by_suffix(path_roots, ".py")
     else:
-        changed = _run_git_diff(base_ref, root)
-        candidate_files = []
-        for relative in changed:
-            if not relative.endswith(".py"):
-                continue
-            candidate = (root / relative).resolve()
-            if candidate.is_file() and _is_under_any(candidate, path_roots):
-                candidate_files.append(candidate)
+        changed = run_git_diff_names(
+            base_ref,
+            root,
+            context="differential mutation scope",
+        )
+        candidate_files = filter_git_changed_files(
+            changed,
+            suffix=".py",
+            search_root=root,
+            path_roots=path_roots,
+        )
 
     manifest = load_manifest(manifest_path(manifest_dir))
     selected: list[Path] = []

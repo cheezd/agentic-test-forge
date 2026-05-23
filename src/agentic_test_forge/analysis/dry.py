@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from agentic_test_forge.reporting.status import ReportStatus
+from agentic_test_forge.scope import iter_files_by_suffix, normalize_paths, resolve_search_root
 
 
 @dataclass(frozen=True)
@@ -38,17 +39,6 @@ class DryReport:
 
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(self.to_dict(), indent=indent)
-
-
-def _iter_python_files(paths: list[Path]) -> list[Path]:
-    files: list[Path] = []
-    for path in paths:
-        resolved = path.resolve()
-        if resolved.is_file() and resolved.suffix == ".py":
-            files.append(resolved)
-        elif resolved.is_dir():
-            files.extend(sorted(resolved.rglob("*.py")))
-    return files
 
 
 def _qualified_name(node: ast.FunctionDef | ast.AsyncFunctionDef, prefix: str) -> str:
@@ -82,17 +72,11 @@ def analyze_dry(
     search_root: Path | None = None,
 ) -> DryReport:
     """Detect duplicate function bodies under paths (advisory only)."""
-    root = (search_root or Path.cwd()).resolve()
-    resolved_paths: list[Path] = []
-    for path in paths:
-        candidate = Path(path)
-        if candidate.is_absolute():
-            resolved_paths.append(candidate)
-        else:
-            resolved_paths.append((root / candidate).resolve())
+    root = resolve_search_root(search_root)
+    resolved_paths = normalize_paths([str(path) for path in paths], root)
 
     fingerprints: dict[str, list[tuple[str, str]]] = {}
-    for filepath in _iter_python_files(resolved_paths):
+    for filepath in iter_files_by_suffix(resolved_paths, ".py"):
         try:
             tree = ast.parse(filepath.read_text(encoding="utf-8"))
         except SyntaxError:

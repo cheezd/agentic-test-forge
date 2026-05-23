@@ -14,6 +14,7 @@ from radon.visitors import Function
 from agentic_test_forge.config.models import CrapFormula
 from agentic_test_forge.errors import ForgeToolError
 from agentic_test_forge.reporting.status import ReportStatus
+from agentic_test_forge.scope import iter_files_by_suffix, normalize_paths, resolve_search_root
 
 
 class CoverageDataMissingError(ForgeToolError, FileNotFoundError):
@@ -75,17 +76,6 @@ def _resolve_coverage_path(coverage_file: Path, search_root: Path) -> Path:
     )
 
 
-def _iter_python_files(paths: list[Path]) -> list[Path]:
-    files: list[Path] = []
-    for path in paths:
-        resolved = path.resolve()
-        if resolved.is_file() and resolved.suffix == ".py":
-            files.append(resolved)
-        elif resolved.is_dir():
-            files.extend(sorted(resolved.rglob("*.py")))
-    return files
-
-
 def _qualified_name(function: Function) -> str:
     name = str(function.name)
     if function.classname:
@@ -130,15 +120,9 @@ def analyze_crap(
     search_root: Path | None = None,
 ) -> CrapReport:
     """Analyze Python functions under paths and return a CRAP report."""
-    root = (search_root or Path.cwd()).resolve()
-    resolved_paths: list[Path] = []
-    for path in paths:
-        candidate = Path(path)
-        if candidate.is_absolute():
-            resolved_paths.append(candidate)
-        else:
-            resolved_paths.append((root / candidate).resolve())
-    python_files = _iter_python_files(resolved_paths)
+    root = resolve_search_root(search_root)
+    resolved_paths = normalize_paths([str(path) for path in paths], root)
+    python_files = iter_files_by_suffix(resolved_paths, ".py")
     coverage_path = _resolve_coverage_path(Path(coverage_file), root)
 
     cov = coverage.Coverage(data_file=str(coverage_path))
