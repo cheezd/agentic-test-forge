@@ -97,7 +97,7 @@ Use advisory thresholds initially (`crap_threshold = 50`) and ratchet down over 
 
 ## Exit codes
 
-Defined by `ForgeExitCode` in `agentic_test_forge.cli.exit_codes` (see `docs/consumer-ci.md`):
+Defined by `ForgeExitCode` in `agentic_test_forge.cli.exit_codes`. Package layout and status/exit mapping policy: [ADR 0001](adr/0001-package-boundaries-and-refactor-conventions.md#exit-codes-and-report-status).
 
 | Code | Enum | Meaning |
 |------|------|---------|

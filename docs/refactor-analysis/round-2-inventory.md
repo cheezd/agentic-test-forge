@@ -105,6 +105,8 @@ Round 2 scope stopped at private helpers inside the four modules above. These ar
 
 **Stop here for Round 2.** Future agents should not re-split Round 1 public pipelines or redo the four refactored modules unless behavior changes require it.
 
+Contributor-facing package boundaries and refactor rules: [ADR 0001](../adr/0001-package-boundaries-and-refactor-conventions.md).
+
 ## Related epics
 
 - Round 1: [#82](https://github.com/cheezd/agentic-test-forge/issues/82) (PRs #94–#99)
