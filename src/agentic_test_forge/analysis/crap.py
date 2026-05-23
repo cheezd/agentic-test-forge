@@ -109,6 +109,61 @@ def _match_coverage_path(data: coverage.CoverageData, filepath: Path) -> str | N
     return None
 
 
+def _coverage_lines_for_file(data: coverage.CoverageData, filepath: Path) -> set[int]:
+    covered_key = _match_coverage_path(data, filepath)
+    if covered_key is None:
+        return set()
+    raw_lines = data.lines(covered_key) or []
+    return set(raw_lines)
+
+
+def _function_blocks_from_source(source: str) -> list[Function]:
+    return [block for block in cc_visit(source) if isinstance(block, Function)]
+
+
+def _finding_from_radon_block(
+    block: Function,
+    filepath: Path,
+    line_set: set[int],
+    *,
+    threshold: float,
+    formula: CrapFormula,
+) -> CrapFinding:
+    end_line = block.endline or block.lineno
+    fn_coverage = _function_coverage(line_set, block.lineno, end_line)
+    score = compute_crap_score(block.complexity, fn_coverage, formula)
+    return CrapFinding(
+        qualified_name=_qualified_name(block),
+        filepath=str(filepath),
+        complexity=float(block.complexity),
+        coverage=fn_coverage,
+        crap_score=score,
+        above_threshold=score > threshold,
+    )
+
+
+def _findings_for_file(
+    filepath: Path,
+    data: coverage.CoverageData,
+    *,
+    threshold: float,
+    formula: CrapFormula,
+) -> list[CrapFinding]:
+    line_set = _coverage_lines_for_file(data, filepath)
+    source = filepath.read_text(encoding="utf-8")
+    blocks = _function_blocks_from_source(source)
+    return [
+        _finding_from_radon_block(
+            block,
+            filepath,
+            line_set,
+            threshold=threshold,
+            formula=formula,
+        )
+        for block in blocks
+    ]
+
+
 def _collect_crap_findings(
     python_files: list[Path],
     data: coverage.CoverageData,
@@ -118,29 +173,14 @@ def _collect_crap_findings(
 ) -> list[CrapFinding]:
     findings: list[CrapFinding] = []
     for filepath in python_files:
-        source = filepath.read_text(encoding="utf-8")
-        covered_key = _match_coverage_path(data, filepath)
-        line_set: set[int] = set()
-        if covered_key is not None:
-            raw_lines = data.lines(covered_key) or []
-            line_set = set(raw_lines)
-
-        for block in cc_visit(source):
-            if not isinstance(block, Function):
-                continue
-            end_line = block.endline or block.lineno
-            fn_coverage = _function_coverage(line_set, block.lineno, end_line)
-            score = compute_crap_score(block.complexity, fn_coverage, formula)
-            findings.append(
-                CrapFinding(
-                    qualified_name=_qualified_name(block),
-                    filepath=str(filepath),
-                    complexity=float(block.complexity),
-                    coverage=fn_coverage,
-                    crap_score=score,
-                    above_threshold=score > threshold,
-                ),
-            )
+        findings.extend(
+            _findings_for_file(
+                filepath,
+                data,
+                threshold=threshold,
+                formula=formula,
+            ),
+        )
     findings.sort(key=lambda item: item.crap_score, reverse=True)
     return findings
 
