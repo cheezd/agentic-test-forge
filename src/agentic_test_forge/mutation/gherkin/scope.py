@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from agentic_test_forge.manifest.partition import partition_by_manifest_hash
 from agentic_test_forge.manifest.store import (
     gherkin_manifest_path,
     load_manifest,
@@ -68,21 +69,17 @@ def resolve_gherkin_scope(
         )
 
     manifest = load_manifest(gherkin_manifest_path(manifest_dir))
-    selected: list[GherkinScenario] = []
-    skipped: list[GherkinScenario] = []
-
+    candidates: list[GherkinScenario] = []
     for feature_path in candidate_files:
-        for scenario in _scenarios_with_examples(feature_path, root):
-            current_hash = scenario_content_hash(scenario.block_text)
-            previous = manifest.files.get(scenario.scenario_id)
-            if (
-                not full_run
-                and previous is not None
-                and previous.content_hash == current_hash
-            ):
-                skipped.append(scenario)
-                continue
-            selected.append(scenario)
+        candidates.extend(_scenarios_with_examples(feature_path, root))
+
+    selected, skipped = partition_by_manifest_hash(
+        candidates,
+        key_fn=lambda scenario: scenario.scenario_id,
+        hash_fn=lambda scenario: scenario_content_hash(scenario.block_text),
+        manifest=manifest,
+        full_run=full_run,
+    )
 
     return GherkinScopeResult(
         selected=tuple(selected),
