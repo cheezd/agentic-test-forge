@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from agentic_test_forge.config.models import GherkinRunner
@@ -20,8 +21,108 @@ from agentic_test_forge.mutation.gherkin.report import (
     GherkinMutationReport,
     build_gherkin_mutation_report,
 )
-from agentic_test_forge.mutation.gherkin.scope import resolve_gherkin_scope
+from agentic_test_forge.mutation.gherkin.scope import GherkinScopeResult, resolve_gherkin_scope
 from agentic_test_forge.scope import resolve_search_root
+
+
+def _skipped_scenario_ids(scope: GherkinScopeResult) -> list[str]:
+    return [scenario.scenario_id for scenario in scope.skipped_unchanged]
+
+
+def _create_scenario_mutator(
+    *,
+    project_root: Path,
+    test_cmd: str,
+    runner: GherkinRunner,
+    run_tests: bool,
+) -> ScenarioMutator:
+    return ScenarioMutator(
+        project_root=project_root,
+        test_cmd=test_cmd,
+        runner=runner,
+        run_tests=run_tests,
+    )
+
+
+def _finding_for_scenario(
+    mutator: ScenarioMutator,
+    scenario: GherkinScenario,
+    *,
+    threshold: float,
+) -> GherkinFinding:
+    return mutator.apply_and_test(scenario, threshold=threshold)
+
+
+def _findings_for_scenarios(
+    mutator: ScenarioMutator,
+    scenarios: Sequence[GherkinScenario],
+    *,
+    threshold: float,
+) -> list[GherkinFinding]:
+    return [
+        _finding_for_scenario(mutator, scenario, threshold=threshold)
+        for scenario in scenarios
+    ]
+
+
+def _manifest_entry_for_scenario(
+    scenario: GherkinScenario,
+    finding: GherkinFinding,
+    *,
+    timestamp: str,
+) -> FileManifestEntry:
+    return FileManifestEntry(
+        content_hash=scenario_content_hash(scenario.block_text),
+        score=finding.score,
+        last_run=timestamp,
+    )
+
+
+def _updated_gherkin_manifest_files(
+    manifest: ForgeManifest,
+    scenarios: Sequence[GherkinScenario],
+    findings: Sequence[GherkinFinding],
+    *,
+    timestamp: str,
+) -> dict[str, FileManifestEntry]:
+    updated_files = dict(manifest.files)
+    for scenario, finding in zip(scenarios, findings, strict=True):
+        updated_files[scenario.scenario_id] = _manifest_entry_for_scenario(
+            scenario,
+            finding,
+            timestamp=timestamp,
+        )
+    return updated_files
+
+
+def _persist_gherkin_manifest(
+    *,
+    scenarios: Sequence[GherkinScenario],
+    findings: Sequence[GherkinFinding],
+    manifest_dir: str,
+) -> None:
+    manifest = load_manifest(gherkin_manifest_path(manifest_dir))
+    timestamp = utc_now_iso()
+    updated_files = _updated_gherkin_manifest_files(
+        manifest,
+        scenarios,
+        findings,
+        timestamp=timestamp,
+    )
+    save_manifest(gherkin_manifest_path(manifest_dir), ForgeManifest(files=updated_files))
+
+
+def _empty_gherkin_mutation_report(
+    *,
+    threshold: float,
+    skipped: list[str],
+) -> GherkinMutationReport:
+    return build_gherkin_mutation_report(
+        threshold=threshold,
+        findings=[],
+        skipped_unchanged=skipped,
+        selected_count=0,
+    )
 
 
 def evaluate_scenario(
@@ -34,13 +135,13 @@ def evaluate_scenario(
     run_tests: bool,
 ) -> GherkinFinding:
     """Evaluate one scenario by delegating to ``ScenarioMutator``."""
-    mutator = ScenarioMutator(
+    mutator = _create_scenario_mutator(
         project_root=project_root,
         test_cmd=test_cmd,
         runner=runner,
         run_tests=run_tests,
     )
-    return mutator.apply_and_test(scenario, threshold=threshold)
+    return _finding_for_scenario(mutator, scenario, threshold=threshold)
 
 
 def analyze_gherkin_mutation(
@@ -64,43 +165,31 @@ def analyze_gherkin_mutation(
         manifest_dir=manifest_dir,
         full_run=full_run,
     )
-
-    skipped = tuple(scenario.scenario_id for scenario in scope.skipped_unchanged)
+    skipped = _skipped_scenario_ids(scope)
 
     if not scope.selected:
-        return build_gherkin_mutation_report(
-            threshold=threshold,
-            findings=[],
-            skipped_unchanged=list(skipped),
-            selected_count=0,
-        )
+        return _empty_gherkin_mutation_report(threshold=threshold, skipped=skipped)
 
-    mutator = ScenarioMutator(
+    mutator = _create_scenario_mutator(
         project_root=root,
         test_cmd=test_cmd,
         runner=runner,
         run_tests=run_tests,
     )
-    findings: list[GherkinFinding] = []
-    for scenario in scope.selected:
-        findings.append(mutator.apply_and_test(scenario, threshold=threshold))
-
+    findings = _findings_for_scenarios(
+        mutator,
+        scope.selected,
+        threshold=threshold,
+    )
     report = build_gherkin_mutation_report(
         threshold=threshold,
         findings=findings,
-        skipped_unchanged=list(skipped),
+        skipped_unchanged=skipped,
         selected_count=len(scope.selected),
     )
-
-    manifest = load_manifest(gherkin_manifest_path(manifest_dir))
-    updated_files = dict(manifest.files)
-    timestamp = utc_now_iso()
-    for scenario, finding in zip(scope.selected, findings, strict=True):
-        updated_files[scenario.scenario_id] = FileManifestEntry(
-            content_hash=scenario_content_hash(scenario.block_text),
-            score=finding.score,
-            last_run=timestamp,
-        )
-    save_manifest(gherkin_manifest_path(manifest_dir), ForgeManifest(files=updated_files))
-
+    _persist_gherkin_manifest(
+        scenarios=scope.selected,
+        findings=findings,
+        manifest_dir=manifest_dir,
+    )
     return report
