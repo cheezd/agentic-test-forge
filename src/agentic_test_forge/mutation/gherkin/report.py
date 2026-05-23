@@ -2,12 +2,30 @@
 
 from __future__ import annotations
 
-import json
-from dataclasses import asdict, dataclass
-from typing import Any
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any, cast
 
-from agentic_test_forge.mutation.code.report import compute_mutation_score
+from agentic_test_forge.reporting.serialize import report_to_json, serialize_findings_report
 from agentic_test_forge.reporting.status import ReportStatus
+from agentic_test_forge.reporting.threshold import (
+    ThresholdFinding,
+    ThresholdReportLabels,
+    build_threshold_report,
+)
+
+_GHERKIN_LABELS = ThresholdReportLabels(
+    no_selection_summary="No changed Gherkin scenarios require mutation testing.",
+    completed_summary=lambda count: f"Mutation testing completed for {count} scenario(s).",
+    violation_summary=lambda violations, threshold, aggregate: (
+        f"{violations} scenario(s) below mutation threshold {threshold}% "
+        f"(aggregate score {aggregate:.1f}%)."
+    ),
+    pass_summary=lambda count, threshold, aggregate: (
+        f"All {count} mutated scenario(s) meet mutation threshold "
+        f"{threshold}% (aggregate score {aggregate:.1f}%)."
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -33,12 +51,10 @@ class GherkinMutationReport:
     skipped_unchanged: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        payload = asdict(self)
-        payload["findings"] = [asdict(finding) for finding in self.findings]
-        return payload
+        return serialize_findings_report(self)
 
     def to_json(self, indent: int = 2) -> str:
-        return json.dumps(self.to_dict(), indent=indent)
+        return report_to_json(self, indent=indent)
 
 
 def build_gherkin_mutation_report(
@@ -48,54 +64,15 @@ def build_gherkin_mutation_report(
     skipped_unchanged: list[str],
     selected_count: int,
 ) -> GherkinMutationReport:
-    if selected_count == 0:
-        summary = "No changed Gherkin scenarios require mutation testing."
-        return GherkinMutationReport(
+    return cast(
+        GherkinMutationReport,
+        build_threshold_report(
             tool="gherkin_mutation",
-            status=ReportStatus.PASS,
+            report_cls=cast(Any, GherkinMutationReport),
             threshold=threshold,
-            findings=tuple(findings),
-            summary=summary,
-            skipped_unchanged=tuple(skipped_unchanged),
-        )
-
-    if not findings:
-        summary = f"Mutation testing completed for {selected_count} scenario(s)."
-        return GherkinMutationReport(
-            tool="gherkin_mutation",
-            status=ReportStatus.PASS,
-            threshold=threshold,
-            findings=(),
-            summary=summary,
-            skipped_unchanged=tuple(skipped_unchanged),
-        )
-
-    violations = [finding for finding in findings if finding.above_threshold]
-    aggregate_killed = sum(finding.killed for finding in findings)
-    aggregate_total = sum(finding.total for finding in findings)
-    aggregate_score = compute_mutation_score(aggregate_killed, aggregate_total)
-    status = (
-        ReportStatus.FAIL
-        if violations or aggregate_score < threshold
-        else ReportStatus.PASS
-    )
-
-    if violations:
-        summary = (
-            f"{len(violations)} scenario(s) below mutation threshold {threshold}% "
-            f"(aggregate score {aggregate_score:.1f}%)."
-        )
-    else:
-        summary = (
-            f"All {len(findings)} mutated scenario(s) meet mutation threshold "
-            f"{threshold}% (aggregate score {aggregate_score:.1f}%)."
-        )
-
-    return GherkinMutationReport(
-        tool="gherkin_mutation",
-        status=status,
-        threshold=threshold,
-        findings=tuple(findings),
-        summary=summary,
-        skipped_unchanged=tuple(skipped_unchanged),
+            findings=cast(Sequence[ThresholdFinding], findings),
+            skipped_unchanged=skipped_unchanged,
+            selected_count=selected_count,
+            labels=_GHERKIN_LABELS,
+        ),
     )

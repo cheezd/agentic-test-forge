@@ -3,13 +3,34 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
+from agentic_test_forge.reporting.serialize import report_to_json, serialize_findings_report
 from agentic_test_forge.reporting.status import ReportStatus
+from agentic_test_forge.reporting.threshold import (
+    ThresholdFinding,
+    ThresholdReportLabels,
+    build_threshold_report,
+    compute_mutation_score,
+)
 
 KILLED_EXIT_CODES = {1, 3, -24}
+
+_MUTATION_LABELS = ThresholdReportLabels(
+    no_selection_summary="No changed Python files require mutation testing.",
+    completed_summary=lambda count: f"Mutation testing completed for {count} file(s).",
+    violation_summary=lambda violations, threshold, aggregate: (
+        f"{violations} file(s) below mutation threshold {threshold}% "
+        f"(aggregate score {aggregate:.1f}%)."
+    ),
+    pass_summary=lambda count, threshold, aggregate: (
+        f"All {count} mutated file(s) meet mutation threshold "
+        f"{threshold}% (aggregate score {aggregate:.1f}%)."
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -35,18 +56,10 @@ class MutationReport:
     skipped_unchanged: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        payload = asdict(self)
-        payload["findings"] = [asdict(finding) for finding in self.findings]
-        return payload
+        return serialize_findings_report(self)
 
     def to_json(self, indent: int = 2) -> str:
-        return json.dumps(self.to_dict(), indent=indent)
-
-
-def compute_mutation_score(killed: int, total: int) -> float:
-    if total == 0:
-        return 100.0
-    return (killed / total) * 100.0
+        return report_to_json(self, indent=indent)
 
 
 def _status_for_exit_code(exit_code: int | None) -> str:
@@ -124,54 +137,15 @@ def build_mutation_report(
     skipped_unchanged: list[str],
     selected_count: int,
 ) -> MutationReport:
-    if selected_count == 0:
-        summary = "No changed Python files require mutation testing."
-        return MutationReport(
+    return cast(
+        MutationReport,
+        build_threshold_report(
             tool="mutation",
-            status=ReportStatus.PASS,
+            report_cls=cast(Any, MutationReport),
             threshold=threshold,
-            findings=tuple(findings),
-            summary=summary,
-            skipped_unchanged=tuple(skipped_unchanged),
-        )
-
-    if not findings:
-        summary = f"Mutation testing completed for {selected_count} file(s)."
-        return MutationReport(
-            tool="mutation",
-            status=ReportStatus.PASS,
-            threshold=threshold,
-            findings=(),
-            summary=summary,
-            skipped_unchanged=tuple(skipped_unchanged),
-        )
-
-    violations = [finding for finding in findings if finding.above_threshold]
-    aggregate_killed = sum(finding.killed for finding in findings)
-    aggregate_total = sum(finding.total for finding in findings)
-    aggregate_score = compute_mutation_score(aggregate_killed, aggregate_total)
-    status = (
-        ReportStatus.FAIL
-        if violations or aggregate_score < threshold
-        else ReportStatus.PASS
-    )
-
-    if violations:
-        summary = (
-            f"{len(violations)} file(s) below mutation threshold {threshold}% "
-            f"(aggregate score {aggregate_score:.1f}%)."
-        )
-    else:
-        summary = (
-            f"All {len(findings)} mutated file(s) meet mutation threshold "
-            f"{threshold}% (aggregate score {aggregate_score:.1f}%)."
-        )
-
-    return MutationReport(
-        tool="mutation",
-        status=status,
-        threshold=threshold,
-        findings=tuple(findings),
-        summary=summary,
-        skipped_unchanged=tuple(skipped_unchanged),
+            findings=cast(Sequence[ThresholdFinding], findings),
+            skipped_unchanged=skipped_unchanged,
+            selected_count=selected_count,
+            labels=_MUTATION_LABELS,
+        ),
     )

@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
-from agentic_test_forge.config import load_config
+import pytest
+
+from agentic_test_forge.config import ConfigError, load_config
 
 
 def test_load_config_from_pyproject(tmp_path: Path) -> None:
@@ -86,3 +88,68 @@ def test_load_config_defaults_when_missing(tmp_path: Path) -> None:
     assert config.gherkin_paths == ["features"]
     assert config.gates.crap is False
     assert config.gates.dry is False
+
+
+def test_load_config_rejects_invalid_crap_formula(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.forge]
+crap_formula = "unknown"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="Invalid crap_formula"):
+        load_config(tmp_path)
+
+
+def test_load_config_rejects_invalid_gherkin_runner(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.forge]
+gherkin_runner = "cucumber"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="Invalid gherkin_runner"):
+        load_config(tmp_path)
+
+
+def test_load_config_rejects_non_numeric_threshold(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.forge]
+mutation_threshold = "high"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="mutation_threshold"):
+        load_config(tmp_path)
+
+
+def test_load_config_rejects_out_of_range_mutation_threshold(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.forge]
+mutation_threshold = 150
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="mutation_threshold"):
+        load_config(tmp_path)
+
+
+def test_load_config_rejects_out_of_range_gherkin_threshold(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.forge]
+gherkin_threshold = -5
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="gherkin_threshold"):
+        load_config(tmp_path)
