@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,6 +41,17 @@ class GherkinScenario:
     end_line: int
     block_text: str
     examples: ExamplesTable | None
+
+
+@dataclass(frozen=True)
+class _ScenarioBlock:
+    """Intermediate parse result for one scenario block."""
+
+    name: str
+    start_line: int
+    end_line: int
+    start_index: int
+    block_lines: tuple[str, ...]
 
 
 def scenario_content_hash(block_text: str) -> str:
@@ -90,13 +102,8 @@ def _parse_examples_table(lines: list[str], start_index: int) -> ExamplesTable |
     )
 
 
-def parse_feature_file(path: Path, *, project_root: Path) -> list[GherkinScenario]:
-    """Extract scenarios with Examples tables from a .feature file."""
-    text = path.read_text(encoding="utf-8")
-    lines = text.splitlines()
-    relative = str(path.relative_to(project_root)).replace("\\", "/")
-    scenarios: list[GherkinScenario] = []
-
+def _iter_scenario_blocks(lines: list[str]) -> Iterator[_ScenarioBlock]:
+    """Yield scenario name, line range, and block lines from feature text."""
     index = 0
     while index < len(lines):
         match = SCENARIO_PATTERN.match(lines[index])
@@ -106,30 +113,56 @@ def parse_feature_file(path: Path, *, project_root: Path) -> list[GherkinScenari
 
         name = match.group(2).strip()
         start_line = index + 1
+        start_index = index
         block_lines = [lines[index]]
         index += 1
-        examples: ExamplesTable | None = None
 
         while index < len(lines):
             line = lines[index]
             if SCENARIO_PATTERN.match(line):
                 break
             block_lines.append(line)
-            examples_match = EXAMPLES_PATTERN.match(line)
-            if examples_match is not None:
-                examples = _parse_examples_table(lines, index)
             index += 1
 
-        block_text = "\n".join(block_lines)
         end_line = start_line + len(block_lines) - 1
-        scenario_id = f"{relative}::{name}"
+        yield _ScenarioBlock(
+            name=name,
+            start_line=start_line,
+            end_line=end_line,
+            start_index=start_index,
+            block_lines=tuple(block_lines),
+        )
+
+
+def _find_examples_in_block(
+    lines: list[str],
+    block: _ScenarioBlock,
+) -> ExamplesTable | None:
+    """Locate and parse the Examples table within one scenario block."""
+    examples: ExamplesTable | None = None
+    for offset, line in enumerate(block.block_lines):
+        if EXAMPLES_PATTERN.match(line) is not None:
+            examples = _parse_examples_table(lines, block.start_index + offset)
+    return examples
+
+
+def parse_feature_file(path: Path, *, project_root: Path) -> list[GherkinScenario]:
+    """Extract scenarios with Examples tables from a .feature file."""
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    relative = str(path.relative_to(project_root)).replace("\\", "/")
+    scenarios: list[GherkinScenario] = []
+
+    for block in _iter_scenario_blocks(lines):
+        examples = _find_examples_in_block(lines, block)
+        block_text = "\n".join(block.block_lines)
         scenarios.append(
             GherkinScenario(
-                scenario_id=scenario_id,
-                name=name,
+                scenario_id=f"{relative}::{block.name}",
+                name=block.name,
                 filepath=relative,
-                start_line=start_line,
-                end_line=end_line,
+                start_line=block.start_line,
+                end_line=block.end_line,
                 block_text=block_text,
                 examples=examples,
             ),
