@@ -1,44 +1,49 @@
-"""Tests for Gherkin Examples mutators."""
+"""Tests for safe Gherkin feature file editing and scenario mutation."""
 
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
-from agentic_test_forge.mutation.gherkin.mutator import (
-    apply_mutation,
-    generate_example_mutations,
-    mutate_cell_value,
-)
+from agentic_test_forge.mutation.gherkin.feature_editor import FeatureFileEditor
+from agentic_test_forge.mutation.gherkin.mutator import ScenarioMutator
 from agentic_test_forge.mutation.gherkin.parser import parse_feature_file
+from agentic_test_forge.mutation.gherkin.scoring import DRY_RUN_MUTATION_EXIT_CODE
 
 
-def test_mutate_cell_value_changes_numbers() -> None:
-    mutations = mutate_cell_value("42")
-    assert "43" in mutations
-    assert "41" in mutations
-
-
-def test_generate_and_apply_example_mutation(tmp_path: Path) -> None:
+def test_feature_file_editor_does_not_mutate_source(tmp_path: Path) -> None:
     feature = tmp_path / "sample.feature"
+    original = (
+        "Feature: Demo\n\n  Scenario Outline: Add\n    Examples:\n      | x |\n      | 1 |\n"
+    )
+    feature.write_text(original, encoding="utf-8")
+
+    with FeatureFileEditor(feature) as editor:
+        editor.write_lines(["mutated"])
+
+    assert feature.read_text(encoding="utf-8") == original
+
+
+def test_scenario_mutator_dry_run_uses_documented_exit_code(tmp_path: Path) -> None:
+    feature = tmp_path / "features" / "sample.feature"
+    feature.parent.mkdir(parents=True)
     feature.write_text(
-        "\n".join(
-            [
-                "Feature: Demo",
-                "",
-                "  Scenario Outline: Add numbers",
-                "    Examples:",
-                "      | a | result |",
-                "      | 1 | 3      |",
-            ],
-        )
-        + "\n",
+        "Feature: Demo\n\n  Scenario Outline: Add\n    Examples:\n      | x |\n      | 1 |\n",
         encoding="utf-8",
     )
     scenario = parse_feature_file(feature, project_root=tmp_path)[0]
-    mutations = generate_example_mutations(scenario)
-    assert mutations
+    mutator = ScenarioMutator(
+        project_root=tmp_path,
+        test_cmd="behave",
+        runner="behave",
+        run_tests=False,
+    )
 
-    original_lines = feature.read_text(encoding="utf-8").splitlines()
-    mutated_lines = apply_mutation(original_lines, scenario, mutations[0])
-    assert mutated_lines != original_lines
-    assert mutations[0].mutated in mutated_lines[mutations[0].line_index]
+    with patch(
+        "agentic_test_forge.mutation.gherkin.mutator.run_acceptance_tests",
+        side_effect=AssertionError("dry-run must not invoke subprocess"),
+    ):
+        finding = mutator.apply_and_test(scenario, threshold=80)
+
+    assert DRY_RUN_MUTATION_EXIT_CODE != 0
+    assert finding.killed == finding.total

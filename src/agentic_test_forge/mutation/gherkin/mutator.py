@@ -3,8 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
+from agentic_test_forge.config.models import GherkinRunner
+from agentic_test_forge.mutation.gherkin.feature_editor import FeatureFileEditor
 from agentic_test_forge.mutation.gherkin.parser import GherkinScenario
+from agentic_test_forge.mutation.gherkin.report import GherkinFinding
+from agentic_test_forge.mutation.gherkin.runner import run_acceptance_tests
+from agentic_test_forge.mutation.gherkin.scoring import (
+    DRY_RUN_MUTATION_EXIT_CODE,
+    score_mutations,
+)
 
 
 @dataclass(frozen=True)
@@ -103,3 +112,62 @@ def apply_mutation(
     indent = original_line[: len(original_line) - len(original_line.lstrip())]
     updated[row.line_index] = f"{indent}| " + " | ".join(cells) + " |"
     return updated
+
+
+@dataclass(frozen=True)
+class ScenarioMutator:
+    """Apply example mutations and run acceptance tests for one scenario."""
+
+    project_root: Path
+    test_cmd: str
+    runner: GherkinRunner
+    run_tests: bool
+
+    def apply_and_test(
+        self,
+        scenario: GherkinScenario,
+        *,
+        threshold: float,
+    ) -> GherkinFinding:
+        """Mutate a scenario's Examples table and score surviving mutations."""
+        mutations = generate_example_mutations(scenario)
+        if not mutations:
+            return score_mutations(
+                scenario_id=scenario.scenario_id,
+                killed=0,
+                total=0,
+                threshold=threshold,
+            )
+
+        source_path = self.project_root / scenario.filepath
+        killed = 0
+
+        with FeatureFileEditor(source_path) as editor:
+            for mutation in mutations:
+                mutated_lines = apply_mutation(
+                    editor.original_lines,
+                    scenario,
+                    mutation,
+                )
+                editor.write_lines(mutated_lines)
+                exit_code = self._mutation_exit_code(scenario, editor.work_path)
+                if exit_code != 0:
+                    killed += 1
+
+        return score_mutations(
+            scenario_id=scenario.scenario_id,
+            killed=killed,
+            total=len(mutations),
+            threshold=threshold,
+        )
+
+    def _mutation_exit_code(self, scenario: GherkinScenario, feature_path: Path) -> int:
+        if not self.run_tests:
+            return DRY_RUN_MUTATION_EXIT_CODE
+        return run_acceptance_tests(
+            test_cmd=self.test_cmd,
+            runner=self.runner,
+            scenario=scenario,
+            project_root=self.project_root,
+            feature_path=feature_path,
+        )

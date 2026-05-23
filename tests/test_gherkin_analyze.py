@@ -45,7 +45,7 @@ def test_analyze_gherkin_mutation_evaluates_scenarios_and_updates_manifest(tmp_p
             return_value=scope,
         ),
         patch(
-            "agentic_test_forge.mutation.gherkin.analyze._evaluate_scenario",
+            "agentic_test_forge.mutation.gherkin.analyze.evaluate_scenario",
             return_value=finding,
         ),
     ):
@@ -71,7 +71,7 @@ def test_evaluate_scenario_runs_mutations_and_scores(tmp_path: Path) -> None:
     )
 
     with patch(
-        "agentic_test_forge.mutation.gherkin.analyze.run_acceptance_tests",
+        "agentic_test_forge.mutation.gherkin.mutator.run_acceptance_tests",
         return_value=1,
     ):
         report = analyze_gherkin_mutation(
