@@ -6,11 +6,13 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from agentic_test_forge.config.models import (
-    CrapFormula,
-    ForgeConfig,
-    GateConfig,
-    GherkinRunner,
+from agentic_test_forge.config.models import ForgeConfig
+from agentic_test_forge.config.parsers import (
+    parse_crap_settings,
+    parse_gates,
+    parse_gherkin_settings,
+    parse_mutation_settings,
+    parse_paths,
 )
 
 _DEFAULTS = ForgeConfig()
@@ -42,59 +44,28 @@ def _find_pyproject(start: Path) -> Path | None:
     return None
 
 
-def _parse_gates(raw: dict[str, Any]) -> GateConfig:
-    gates_raw = raw.get("gates", {})
-    if not isinstance(gates_raw, dict):
-        return _DEFAULTS.gates
-    return GateConfig(
-        crap=bool(gates_raw.get("crap", _DEFAULTS.gates.crap)),
-        mutation=bool(gates_raw.get("mutation", _DEFAULTS.gates.mutation)),
-        gherkin=bool(gates_raw.get("gherkin", _DEFAULTS.gates.gherkin)),
-        dry=bool(gates_raw.get("dry", _DEFAULTS.gates.dry)),
-    )
-
-
 def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
-    paths = raw.get("paths", _DEFAULTS.paths)
-    if isinstance(paths, str):
-        paths_list = [paths]
-    elif isinstance(paths, list):
-        paths_list = [str(p) for p in paths]
-    else:
-        paths_list = list(_DEFAULTS.paths)
-
-    formula_raw = str(raw.get("crap_formula", _DEFAULTS.crap_formula))
-    formula: CrapFormula = "simplified" if formula_raw == "simplified" else "standard"
-
-    threshold_raw = raw.get("crap_threshold", _DEFAULTS.crap_threshold)
-    threshold = float(threshold_raw)
+    """Compose forge config from focused section parsers."""
+    paths = parse_paths(raw, _DEFAULTS)
+    crap_threshold, crap_formula = parse_crap_settings(raw, _DEFAULTS)
+    mutation_threshold, mutation_base_ref, mutation_test_cmd = parse_mutation_settings(
+        raw,
+        _DEFAULTS,
+    )
+    (
+        gherkin_threshold,
+        gherkin_base_ref,
+        gherkin_test_cmd,
+        gherkin_runner,
+        gherkin_paths,
+    ) = parse_gherkin_settings(raw, _DEFAULTS)
 
     manifest_dir = str(raw.get("manifest_dir", _DEFAULTS.manifest_dir))
 
-    mutation_threshold_raw = raw.get("mutation_threshold", _DEFAULTS.mutation_threshold)
-    mutation_threshold = float(mutation_threshold_raw)
-    mutation_base_ref = str(raw.get("mutation_base_ref", _DEFAULTS.mutation_base_ref))
-    mutation_test_cmd = str(raw.get("mutation_test_cmd", _DEFAULTS.mutation_test_cmd))
-
-    gherkin_threshold_raw = raw.get("gherkin_threshold", _DEFAULTS.gherkin_threshold)
-    gherkin_threshold = float(gherkin_threshold_raw)
-    gherkin_base_ref = str(raw.get("gherkin_base_ref", _DEFAULTS.gherkin_base_ref))
-    gherkin_test_cmd = str(raw.get("gherkin_test_cmd", _DEFAULTS.gherkin_test_cmd))
-    runner_raw = str(raw.get("gherkin_runner", _DEFAULTS.gherkin_runner))
-    gherkin_runner: GherkinRunner = "pytest" if runner_raw == "pytest" else "behave"
-
-    gherkin_paths_raw = raw.get("gherkin_paths", _DEFAULTS.gherkin_paths)
-    if isinstance(gherkin_paths_raw, str):
-        gherkin_paths_list = [gherkin_paths_raw]
-    elif isinstance(gherkin_paths_raw, list):
-        gherkin_paths_list = [str(p) for p in gherkin_paths_raw]
-    else:
-        gherkin_paths_list = list(_DEFAULTS.gherkin_paths)
-
     return ForgeConfig(
-        paths=paths_list,
-        crap_threshold=threshold,
-        crap_formula=formula,
+        paths=paths,
+        crap_threshold=crap_threshold,
+        crap_formula=crap_formula,
         manifest_dir=manifest_dir,
         mutation_threshold=mutation_threshold,
         mutation_base_ref=mutation_base_ref,
@@ -103,8 +74,8 @@ def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
         gherkin_base_ref=gherkin_base_ref,
         gherkin_test_cmd=gherkin_test_cmd,
         gherkin_runner=gherkin_runner,
-        gherkin_paths=gherkin_paths_list,
-        gates=_parse_gates(raw),
+        gherkin_paths=gherkin_paths,
+        gates=parse_gates(raw, _DEFAULTS.gates),
     )
 
 

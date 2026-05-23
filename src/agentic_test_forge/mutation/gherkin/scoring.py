@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from agentic_test_forge.mutation.code.report import compute_mutation_score
 from agentic_test_forge.mutation.gherkin.report import GherkinFinding
+from agentic_test_forge.reporting.threshold import compute_mutation_score
 
 # Dry-run skips subprocess execution. Non-zero exit codes count as "killed" mutations,
 # matching prior behavior when run_tests=False assumed exit code 1.

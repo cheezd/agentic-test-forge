@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +12,7 @@ from radon.visitors import Function
 
 from agentic_test_forge.config.models import CrapFormula
 from agentic_test_forge.errors import ForgeToolError
+from agentic_test_forge.reporting.serialize import report_to_json, serialize_findings_report
 from agentic_test_forge.reporting.status import ReportStatus
 from agentic_test_forge.scope import iter_files_by_suffix, normalize_paths, resolve_search_root
 
@@ -45,12 +45,10 @@ class CrapReport:
     summary: str
 
     def to_dict(self) -> dict[str, Any]:
-        payload = asdict(self)
-        payload["findings"] = [asdict(f) for f in self.findings]
-        return payload
+        return serialize_findings_report(self)
 
     def to_json(self, indent: int = 2) -> str:
-        return json.dumps(self.to_dict(), indent=indent)
+        return report_to_json(self, indent=indent)
 
 
 def compute_crap_score(
