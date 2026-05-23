@@ -16,7 +16,7 @@ Local working copy of the broader refactor research lives at `workspace/refactor
 | [#108](https://github.com/cheezd/agentic-test-forge/issues/108) | `analysis/dry.py` | [#113](https://github.com/cheezd/agentic-test-forge/pull/113) | Merged |
 | [#109](https://github.com/cheezd/agentic-test-forge/issues/109) | `mutation/code/analyze.py` | [#114](https://github.com/cheezd/agentic-test-forge/pull/114) | Merged |
 | [#110](https://github.com/cheezd/agentic-test-forge/issues/110) | `mutation/gherkin/analyze.py` | [#115](https://github.com/cheezd/agentic-test-forge/pull/115) | Merged |
-| [#111](https://github.com/cheezd/agentic-test-forge/issues/111) | This document | TBD | In progress |
+| [#111](https://github.com/cheezd/agentic-test-forge/issues/111) | This document | [#116](https://github.com/cheezd/agentic-test-forge/pull/116) | In progress |
 
 ## `analysis/crap.py` (#107)
 
