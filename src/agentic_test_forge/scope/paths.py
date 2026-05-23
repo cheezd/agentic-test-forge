@@ -42,6 +42,11 @@ def iter_files_by_suffix(roots: list[Path], suffix: str) -> list[Path]:
     return files
 
 
+def to_posix_relative(path: Path, search_root: Path) -> str:
+    """Return a forward-slash relative path from ``search_root``."""
+    return str(path.relative_to(search_root)).replace("\\", "/")
+
+
 def filter_git_changed_files(
     changed: list[str],
     *,

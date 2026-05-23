@@ -31,6 +31,7 @@ class DryReport:
     findings: tuple[DryFinding, ...]
     summary: str
     advisory: bool = True
+    skipped_parse_files: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -39,6 +40,9 @@ class DryReport:
 
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(self.to_dict(), indent=indent)
+
+
+FunctionRecord = tuple[str, str, str]
 
 
 def _qualified_name(node: ast.FunctionDef | ast.AsyncFunctionDef, prefix: str) -> str:
@@ -50,40 +54,59 @@ def _body_fingerprint(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     return ast.dump(module, include_attributes=False)
 
 
-def _collect_functions(
-    tree: ast.AST,
-    filepath: Path,
-    prefix: str = "",
-) -> list[tuple[str, str, str]]:
-    """Return (qualified_name, filepath, body_fingerprint) for each function."""
-    collected: list[tuple[str, str, str]] = []
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if not node.body:
-                continue
-            name = _qualified_name(node, prefix)
-            collected.append((name, str(filepath), _body_fingerprint(node)))
-    return collected
+class _FunctionCollector(ast.NodeVisitor):
+    """Collect functions with class-aware qualified names."""
+
+    def __init__(self, filepath: Path) -> None:
+        self.filepath = filepath
+        self.functions: list[FunctionRecord] = []
+        self._prefix_stack: list[str] = []
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self._prefix_stack.append(node.name)
+        self.generic_visit(node)
+        self._prefix_stack.pop()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._visit_function(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._visit_function(node)
+
+    def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        if not node.body:
+            return
+        prefix = ".".join(self._prefix_stack)
+        name = _qualified_name(node, prefix)
+        self.functions.append((name, str(self.filepath), _body_fingerprint(node)))
+        self.generic_visit(node)
 
 
-def analyze_dry(
-    paths: list[str | Path],
-    *,
-    search_root: Path | None = None,
-) -> DryReport:
-    """Detect duplicate function bodies under paths (advisory only)."""
-    root = resolve_search_root(search_root)
-    resolved_paths = normalize_paths([str(path) for path in paths], root)
+def _collect_functions(tree: ast.AST, filepath: Path) -> list[FunctionRecord]:
+    collector = _FunctionCollector(filepath)
+    collector.visit(tree)
+    return collector.functions
 
+
+def _index_function_fingerprints(
+    python_files: list[Path],
+) -> tuple[dict[str, list[tuple[str, str]]], tuple[str, ...]]:
     fingerprints: dict[str, list[tuple[str, str]]] = {}
-    for filepath in iter_files_by_suffix(resolved_paths, ".py"):
+    skipped: list[str] = []
+    for filepath in python_files:
         try:
             tree = ast.parse(filepath.read_text(encoding="utf-8"))
         except SyntaxError:
+            skipped.append(str(filepath))
             continue
         for name, file_str, fingerprint in _collect_functions(tree, filepath):
             fingerprints.setdefault(fingerprint, []).append((name, file_str))
+    return fingerprints, tuple(sorted(skipped))
 
+
+def _find_duplicate_pairs(
+    fingerprints: dict[str, list[tuple[str, str]]],
+) -> list[DryFinding]:
     findings: list[DryFinding] = []
     seen_pairs: set[tuple[str, str, str, str]] = set()
     for entries in fingerprints.values():
@@ -104,8 +127,15 @@ def analyze_dry(
                         duplicate_filepath=other_file,
                     ),
                 )
-
     findings.sort(key=lambda item: (item.filepath, item.qualified_name))
+    return findings
+
+
+def _build_dry_report(
+    findings: list[DryFinding],
+    *,
+    skipped_parse_files: tuple[str, ...],
+) -> DryReport:
     if not findings:
         summary = "No duplicate function bodies detected."
     else:
@@ -115,4 +145,19 @@ def analyze_dry(
         status=ReportStatus.PASS,
         findings=tuple(findings),
         summary=summary,
+        skipped_parse_files=skipped_parse_files,
     )
+
+
+def analyze_dry(
+    paths: list[str | Path],
+    *,
+    search_root: Path | None = None,
+) -> DryReport:
+    """Detect duplicate function bodies under paths (advisory only)."""
+    root = resolve_search_root(search_root)
+    resolved_paths = normalize_paths([str(path) for path in paths], root)
+    python_files = iter_files_by_suffix(resolved_paths, ".py")
+    fingerprints, skipped = _index_function_fingerprints(python_files)
+    findings = _find_duplicate_pairs(fingerprints)
+    return _build_dry_report(findings, skipped_parse_files=skipped)
