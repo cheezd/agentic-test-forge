@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from agentic_test_forge.manifest.store import (
@@ -24,8 +25,16 @@ from agentic_test_forge.mutation.code.scope import ScopeResult, resolve_mutation
 from agentic_test_forge.scope import resolve_search_root, to_posix_relative
 
 
+def _relative_paths(paths: Sequence[Path], root: Path) -> list[str]:
+    return [to_posix_relative(path, root) for path in paths]
+
+
 def _skipped_relative_paths(scope: ScopeResult, root: Path) -> list[str]:
-    return [to_posix_relative(path, root) for path in scope.skipped_unchanged]
+    return _relative_paths(scope.skipped_unchanged, root)
+
+
+def _selected_relative_paths(scope: ScopeResult, root: Path) -> list[str]:
+    return _relative_paths(scope.selected, root)
 
 
 def _run_mutation_tool(
@@ -37,8 +46,43 @@ def _run_mutation_tool(
 ) -> None:
     if not run_mutmut_tool:
         return
-    relative_paths = [to_posix_relative(path, root) for path in scope.selected]
-    run_mutmut(root, relative_paths=relative_paths, test_cmd=test_cmd)
+    run_mutmut(
+        root,
+        relative_paths=_selected_relative_paths(scope, root),
+        test_cmd=test_cmd,
+    )
+
+
+def _manifest_entry_for_finding(
+    root: Path,
+    finding: MutationFinding,
+    *,
+    timestamp: str,
+) -> FileManifestEntry | None:
+    filepath = root / finding.filepath
+    if not filepath.is_file():
+        return None
+    return FileManifestEntry(
+        content_hash=file_content_hash(filepath),
+        score=finding.score,
+        last_run=timestamp,
+    )
+
+
+def _updated_manifest_files(
+    manifest: ForgeManifest,
+    findings: list[MutationFinding],
+    *,
+    root: Path,
+    timestamp: str,
+) -> dict[str, FileManifestEntry]:
+    updated_files = dict(manifest.files)
+    for finding in findings:
+        entry = _manifest_entry_for_finding(root, finding, timestamp=timestamp)
+        if entry is None:
+            continue
+        updated_files[finding.filepath] = entry
+    return updated_files
 
 
 def _persist_mutation_manifest(
@@ -48,18 +92,27 @@ def _persist_mutation_manifest(
     manifest_dir: str,
 ) -> None:
     manifest = load_manifest(manifest_path(manifest_dir))
-    updated_files = dict(manifest.files)
     timestamp = utc_now_iso()
-    for finding in findings:
-        filepath = root / finding.filepath
-        if not filepath.is_file():
-            continue
-        updated_files[finding.filepath] = FileManifestEntry(
-            content_hash=file_content_hash(filepath),
-            score=finding.score,
-            last_run=timestamp,
-        )
+    updated_files = _updated_manifest_files(
+        manifest,
+        findings,
+        root=root,
+        timestamp=timestamp,
+    )
     save_manifest(manifest_path(manifest_dir), ForgeManifest(files=updated_files))
+
+
+def _empty_mutation_report(
+    *,
+    threshold: float,
+    skipped: list[str],
+) -> MutationReport:
+    return build_mutation_report(
+        threshold=threshold,
+        findings=[],
+        skipped_unchanged=skipped,
+        selected_count=0,
+    )
 
 
 def analyze_mutation(
@@ -85,12 +138,7 @@ def analyze_mutation(
     skipped = _skipped_relative_paths(scope, root)
 
     if not scope.selected:
-        return build_mutation_report(
-            threshold=threshold,
-            findings=[],
-            skipped_unchanged=skipped,
-            selected_count=0,
-        )
+        return _empty_mutation_report(threshold=threshold, skipped=skipped)
 
     _run_mutation_tool(
         root=root,
