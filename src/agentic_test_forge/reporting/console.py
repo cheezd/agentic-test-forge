@@ -10,11 +10,12 @@ from agentic_test_forge.analysis.dry import DryReport
 from agentic_test_forge.mutation.code.report import MutationReport
 from agentic_test_forge.mutation.gherkin.report import GherkinMutationReport
 from agentic_test_forge.orchestration.report import CheckReport
+from agentic_test_forge.reporting.status import ReportStatus
 
 
 def print_crap_report(report: CrapReport, console: Console) -> None:
     """Render a human-readable CRAP report."""
-    status_style = "green" if report.status == "pass" else "red"
+    status_style = "green" if report.status == ReportStatus.PASS else "red"
     status = report.status.upper()
     console.print(f"[bold]CRAP analysis[/bold] — [{status_style}]{status}[/{status_style}]")
     console.print(report.summary)
@@ -44,7 +45,7 @@ def print_crap_report(report: CrapReport, console: Console) -> None:
 
 def print_mutation_report(report: MutationReport, console: Console) -> None:
     """Render a human-readable mutation report."""
-    status_style = "green" if report.status == "pass" else "red"
+    status_style = "green" if report.status == ReportStatus.PASS else "red"
     status = report.status.upper()
     console.print(
         f"[bold]Mutation analysis[/bold] — [{status_style}]{status}[/{status_style}]",
@@ -105,11 +106,15 @@ def print_dry_report(report: DryReport, console: Console) -> None:
 
 def print_check_report(report: CheckReport, console: Console) -> None:
     """Render a combined quality gate report."""
-    status_style = "green" if report.status == "pass" and not report.errors else "red"
-    if report.errors and report.status == "pass":
+    if report.status == ReportStatus.PASS:
+        status_style = "green"
+        label = "PASS"
+    elif report.status == ReportStatus.ERROR:
+        status_style = "red"
         label = "ERROR"
     else:
-        label = report.status.upper()
+        status_style = "red"
+        label = "FAIL"
     console.print(f"[bold]Quality gate[/bold] — [{status_style}]{label}[/{status_style}]")
     console.print(report.summary)
 
@@ -129,7 +134,7 @@ def print_check_report(report: CheckReport, console: Console) -> None:
 
 def print_gherkin_mutation_report(report: GherkinMutationReport, console: Console) -> None:
     """Render a human-readable Gherkin mutation report."""
-    status_style = "green" if report.status == "pass" else "red"
+    status_style = "green" if report.status == ReportStatus.PASS else "red"
     status = report.status.upper()
     console.print(
         f"[bold]Gherkin mutation[/bold] — [{status_style}]{status}[/{status_style}]",

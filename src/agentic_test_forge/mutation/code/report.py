@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
-ReportStatus = Literal["pass", "fail"]
+from agentic_test_forge.reporting.status import ReportStatus
 
 KILLED_EXIT_CODES = {1, 3, -24}
 
@@ -128,7 +128,7 @@ def build_mutation_report(
         summary = "No changed Python files require mutation testing."
         return MutationReport(
             tool="mutation",
-            status="pass",
+            status=ReportStatus.PASS,
             threshold=threshold,
             findings=tuple(findings),
             summary=summary,
@@ -139,7 +139,7 @@ def build_mutation_report(
         summary = f"Mutation testing completed for {selected_count} file(s)."
         return MutationReport(
             tool="mutation",
-            status="pass",
+            status=ReportStatus.PASS,
             threshold=threshold,
             findings=(),
             summary=summary,
@@ -150,7 +150,11 @@ def build_mutation_report(
     aggregate_killed = sum(finding.killed for finding in findings)
     aggregate_total = sum(finding.total for finding in findings)
     aggregate_score = compute_mutation_score(aggregate_killed, aggregate_total)
-    status: ReportStatus = "fail" if violations or aggregate_score < threshold else "pass"
+    status = (
+        ReportStatus.FAIL
+        if violations or aggregate_score < threshold
+        else ReportStatus.PASS
+    )
 
     if violations:
         summary = (

@@ -28,6 +28,7 @@ def also_duplicate(x):
     report = analyze_dry(["src"], search_root=tmp_path)
 
     assert report.status == "pass"
+    assert report.advisory is True
     assert len(report.findings) == 1
     assert report.findings[0].duplicate_of in {"duplicate", "also_duplicate"}
 

@@ -18,13 +18,8 @@ from agentic_test_forge.mutation.code.report import (
     build_findings_from_meta,
     build_mutation_report,
 )
-from agentic_test_forge.mutation.code.runner import (
-    MutationUnavailableError,
-    MutmutRunError,
-    run_mutmut,
-    temporary_mutmut_paths,
-)
-from agentic_test_forge.mutation.code.scope import GitScopeError, resolve_mutation_scope
+from agentic_test_forge.mutation.code.runner import run_mutmut
+from agentic_test_forge.mutation.code.scope import resolve_mutation_scope
 
 
 def analyze_mutation(
@@ -66,11 +61,11 @@ def analyze_mutation(
     ]
 
     if run_mutmut_tool:
-        try:
-            with temporary_mutmut_paths(root, relative_paths, test_cmd=test_cmd):
-                run_mutmut(root)
-        except (MutationUnavailableError, MutmutRunError, GitScopeError):
-            raise
+        run_mutmut(
+            root,
+            relative_paths=relative_paths,
+            test_cmd=test_cmd,
+        )
 
     findings = build_findings_from_meta(
         root,

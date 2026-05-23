@@ -4,16 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentic_test_forge.analysis.crap import CoverageDataMissingError, analyze_crap
+from agentic_test_forge.analysis.crap import analyze_crap
 from agentic_test_forge.analysis.dry import analyze_dry
 from agentic_test_forge.config.models import ForgeConfig
-from agentic_test_forge.mutation.code import (
-    GitScopeError,
-    MutationUnavailableError,
-    MutmutRunError,
-    analyze_mutation,
-)
-from agentic_test_forge.mutation.gherkin import GherkinRunError, analyze_gherkin_mutation
+from agentic_test_forge.errors import ForgeToolError
+from agentic_test_forge.mutation.code import analyze_mutation
+from agentic_test_forge.mutation.gherkin import analyze_gherkin_mutation
 from agentic_test_forge.orchestration.report import CheckReport, build_check_report
 
 
@@ -56,7 +52,7 @@ def run_quality_check(
                 coverage_file=coverage_file,
                 search_root=root,
             )
-        except CoverageDataMissingError as exc:
+        except ForgeToolError as exc:
             errors.append(f"crap: {exc}")
 
     if config.gates.mutation:
@@ -71,7 +67,7 @@ def run_quality_check(
                 full_run=full_run,
                 test_cmd=config.mutation_test_cmd,
             )
-        except (GitScopeError, MutationUnavailableError, MutmutRunError) as exc:
+        except ForgeToolError as exc:
             errors.append(f"mutation: {exc}")
 
     if config.gates.gherkin:
@@ -88,7 +84,7 @@ def run_quality_check(
                 test_cmd=config.gherkin_test_cmd,
                 runner=config.gherkin_runner,
             )
-        except (GitScopeError, GherkinRunError) as exc:
+        except ForgeToolError as exc:
             errors.append(f"gherkin: {exc}")
 
     return build_check_report(
