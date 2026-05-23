@@ -4,7 +4,70 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentic_test_forge.analysis.dry import analyze_dry
+from agentic_test_forge.analysis.dry import (
+    DuplicatePair,
+    _find_duplicate_pairs,
+    _finding_from_duplicate_pair,
+    _pairs_from_fingerprint_entries,
+    analyze_dry,
+)
+
+
+def test_duplicate_pair_normalized_is_symmetric() -> None:
+    forward = DuplicatePair("alpha", "a.py", "beta", "b.py")
+    reverse = forward.reverse
+
+    assert forward.normalized() == reverse.normalized()
+
+
+def test_pairs_from_fingerprint_entries_emits_combinations() -> None:
+    entries = [("first", "one.py"), ("second", "two.py"), ("third", "three.py")]
+
+    pairs = _pairs_from_fingerprint_entries(entries)
+
+    assert len(pairs) == 3
+    assert pairs[0] == DuplicatePair("first", "one.py", "second", "two.py")
+    assert pairs[1] == DuplicatePair("first", "one.py", "third", "three.py")
+    assert pairs[2] == DuplicatePair("second", "two.py", "third", "three.py")
+
+
+def test_finding_from_duplicate_pair_maps_fields() -> None:
+    pair = DuplicatePair("foo", "left.py", "bar", "right.py")
+
+    finding = _finding_from_duplicate_pair(pair)
+
+    assert finding.qualified_name == "foo"
+    assert finding.filepath == "left.py"
+    assert finding.duplicate_of == "bar"
+    assert finding.duplicate_filepath == "right.py"
+
+
+def test_find_duplicate_pairs_dedupes_reverse_direction() -> None:
+    fingerprints = {
+        "same-body": [
+            ("alpha", "a.py"),
+            ("beta", "b.py"),
+        ],
+    }
+
+    findings = _find_duplicate_pairs(fingerprints)
+
+    assert len(findings) == 1
+    assert {findings[0].qualified_name, findings[0].duplicate_of} == {"alpha", "beta"}
+
+
+def test_find_duplicate_pairs_reports_all_pairs_within_fingerprint() -> None:
+    fingerprints = {
+        "same-body": [
+            ("one", "1.py"),
+            ("two", "2.py"),
+            ("three", "3.py"),
+        ],
+    }
+
+    findings = _find_duplicate_pairs(fingerprints)
+
+    assert len(findings) == 3
 
 
 def test_analyze_dry_detects_duplicate_function_bodies(tmp_path: Path) -> None:
