@@ -10,6 +10,7 @@ from agentic_test_forge.manifest.store import (
     ForgeManifest,
     gherkin_manifest_path,
     load_manifest,
+    save_manifest,
 )
 from agentic_test_forge.mutation.gherkin.analyze import (
     _manifest_entry_for_scenario,
@@ -109,12 +110,56 @@ def test_persist_gherkin_manifest_writes_json(tmp_path: Path) -> None:
     manifest_dir = str(tmp_path / ".forge")
 
     _persist_gherkin_manifest(
+        paths=["features"],
+        root=tmp_path,
         scenarios=[scenario],
         findings=[finding],
         manifest_dir=manifest_dir,
     )
 
     manifest = load_manifest(gherkin_manifest_path(manifest_dir))
+    assert manifest.files[scenario.scenario_id].score == 100.0
+
+
+def test_persist_gherkin_manifest_prunes_removed_scenarios(tmp_path: Path) -> None:
+    feature = tmp_path / "features" / "sample.feature"
+    feature.parent.mkdir(parents=True)
+    feature.write_text(
+        "Feature: Demo\n\n  Scenario Outline: Add\n    Examples:\n      | x |\n      | 1 |\n",
+        encoding="utf-8",
+    )
+    scenario = parse_feature_file(feature, project_root=tmp_path)[0]
+    finding = GherkinFinding(
+        scenario_id=scenario.scenario_id,
+        score=100.0,
+        killed=1,
+        total=1,
+        above_threshold=False,
+    )
+    manifest_dir = str(tmp_path / ".forge")
+    save_manifest(
+        gherkin_manifest_path(manifest_dir),
+        ForgeManifest(
+            files={
+                "features/old.feature::Removed": FileManifestEntry(
+                    content_hash="gone",
+                    score=50.0,
+                    last_run="old",
+                ),
+            },
+        ),
+    )
+
+    _persist_gherkin_manifest(
+        paths=["features"],
+        root=tmp_path,
+        scenarios=[scenario],
+        findings=[finding],
+        manifest_dir=manifest_dir,
+    )
+
+    manifest = load_manifest(gherkin_manifest_path(manifest_dir))
+    assert "features/old.feature::Removed" not in manifest.files
     assert manifest.files[scenario.scenario_id].score == 100.0
 
 def test_analyze_gherkin_mutation_without_selected_scenarios(tmp_path: Path) -> None:

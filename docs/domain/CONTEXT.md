@@ -24,7 +24,7 @@ The tool integrates with existing pytest/behave workflows rather than replacing 
 | **CRAP threshold** | Maximum allowed CRAP score before flagging (default TBD, prompt suggests 6). | Coverage percentage threshold |
 | **Mutation testing** | Introduce small code/scenario changes; tests should fail if they truly validate behavior. | Fuzz testing or property-based testing |
 | **Differential mutation** | Run mutation only on changed functions (code) or scenarios (Gherkin), identified via git diff and/or content hashes. | Full-suite mutation every run |
-| **Forge hash / manifest** | Stable content hash stored inline (`# forge-hash: abc123`) or in a manifest file to skip unchanged units in differential runs. | Git commit SHA |
+| **Forge hash / manifest** | Stable content hash stored inline (`# forge-hash: abc123`) or in a manifest file to skip unchanged units in differential runs. On save, stale entries for deleted files or removed scenarios are pruned; existing but out-of-scope entries are retained. | Git commit SHA |
 | **Code mutation** | mutmut-driven changes to Python source under test. | Gherkin mutation |
 | **Gherkin mutation** | Mutations to `.feature` Examples tables (strings, numbers, edge cases); acceptance tests should fail. | Code mutation |
 | **Agent report** | Structured JSON plus human-readable Rich summary for programmatic consumption. | Plain pytest output |
@@ -56,6 +56,7 @@ Boundaries: Analysis does not mutate code. Mutation contexts do not compute CRAP
 - **Consumer CI is a first-class deployment target** — `forge check` must be reliable, documented, and fast enough for PR pipelines (differential mode is essential, not optional).
 - CI/pre-commit must receive non-zero exit codes when any configured gate fails.
 - Differential runs must be deterministic given the same inputs and manifest state.
+- Manifest saves prune entries whose keys no longer refer to live repo entities (deleted `.py` files or removed Gherkin scenarios). Entries for existing files/scenarios are retained even when outside the current git diff scope. `--full` bypasses manifest skip during scope selection only; pruning still runs on save.
 - Library must be installable into other repos (editable, VCS, or PyPI) without coupling to this repo's layout.
 - Library must be usable programmatically (agents call API, not only CLI).
 - Self-tests must demonstrate the library eats its own dogfood (coverage, low CRAP).

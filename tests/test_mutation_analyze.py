@@ -10,6 +10,7 @@ from agentic_test_forge.manifest.store import (
     ForgeManifest,
     load_manifest,
     manifest_path,
+    save_manifest,
 )
 from agentic_test_forge.mutation.code.analyze import (
     _manifest_entry_for_finding,
@@ -70,6 +71,8 @@ def test_updated_manifest_files_preserves_existing_entries(tmp_path: Path) -> No
     module = tmp_path / "src" / "sample.py"
     module.parent.mkdir(parents=True)
     module.write_text("def sample():\n    return 1\n", encoding="utf-8")
+    legacy_module = tmp_path / "legacy.py"
+    legacy_module.write_text("x = 1\n", encoding="utf-8")
     finding = MutationFinding(
         filepath="src/sample.py",
         score=100.0,
@@ -86,6 +89,38 @@ def test_updated_manifest_files_preserves_existing_entries(tmp_path: Path) -> No
     assert updated["legacy.py"] == legacy
     assert updated["src/sample.py"].score == 100.0
     assert updated["src/sample.py"].last_run == timestamp
+
+
+def test_persist_mutation_manifest_prunes_deleted_files(tmp_path: Path) -> None:
+    module = tmp_path / "src" / "sample.py"
+    module.parent.mkdir(parents=True)
+    module.write_text("def sample():\n    return 1\n", encoding="utf-8")
+    finding = MutationFinding(
+        filepath="src/sample.py",
+        score=100.0,
+        killed=1,
+        total=1,
+        above_threshold=False,
+    )
+    manifest_dir = str(tmp_path / ".forge")
+    save_manifest(
+        manifest_path(manifest_dir),
+        ForgeManifest(
+            files={
+                "src/removed.py": FileManifestEntry(
+                    content_hash="gone",
+                    score=50.0,
+                    last_run="old",
+                ),
+            },
+        ),
+    )
+
+    _persist_mutation_manifest(root=tmp_path, findings=[finding], manifest_dir=manifest_dir)
+
+    manifest = load_manifest(manifest_path(manifest_dir))
+    assert "src/removed.py" not in manifest.files
+    assert manifest.files["src/sample.py"].score == 100.0
 
 
 def test_persist_mutation_manifest_writes_json(tmp_path: Path) -> None:
