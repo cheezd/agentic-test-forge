@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 from agentic_test_forge.analysis.crap import analyze_crap
 from agentic_test_forge.analysis.dry import analyze_dry
@@ -11,6 +13,24 @@ from agentic_test_forge.errors import ForgeToolError
 from agentic_test_forge.mutation.code import analyze_mutation
 from agentic_test_forge.mutation.gherkin import analyze_gherkin_mutation
 from agentic_test_forge.orchestration.report import CheckReport, build_check_report
+
+T = TypeVar("T")
+
+
+def _run_blocking_gate(
+    name: str,
+    analyze_fn: Callable[[], T],
+    *,
+    gates_run: list[str],
+    errors: list[str],
+) -> T | None:
+    """Run a gate that may raise ``ForgeToolError``; record failures in ``errors``."""
+    gates_run.append(name)
+    try:
+        return analyze_fn()
+    except ForgeToolError as exc:
+        errors.append(f"{name}: {exc}")
+        return None
 
 
 def run_quality_check(
@@ -43,22 +63,23 @@ def run_quality_check(
         dry_report = analyze_dry(source_paths, search_root=root)
 
     if config.gates.crap:
-        gates_run.append("crap")
-        try:
-            crap_report = analyze_crap(
+        crap_report = _run_blocking_gate(
+            "crap",
+            lambda: analyze_crap(
                 source_paths,
                 threshold=config.crap_threshold,
                 formula=config.crap_formula,
                 coverage_file=coverage_file,
                 search_root=root,
-            )
-        except ForgeToolError as exc:
-            errors.append(f"crap: {exc}")
+            ),
+            gates_run=gates_run,
+            errors=errors,
+        )
 
     if config.gates.mutation:
-        gates_run.append("mutation")
-        try:
-            mutation_report = analyze_mutation(
+        mutation_report = _run_blocking_gate(
+            "mutation",
+            lambda: analyze_mutation(
                 source_paths,
                 threshold=config.mutation_threshold,
                 base_ref=effective_base,
@@ -66,15 +87,16 @@ def run_quality_check(
                 search_root=root,
                 full_run=full_run,
                 test_cmd=config.mutation_test_cmd,
-            )
-        except ForgeToolError as exc:
-            errors.append(f"mutation: {exc}")
+            ),
+            gates_run=gates_run,
+            errors=errors,
+        )
 
     if config.gates.gherkin:
-        gates_run.append("gherkin")
         gherkin_base = base_ref if base_ref is not None else config.gherkin_base_ref
-        try:
-            gherkin_report = analyze_gherkin_mutation(
+        gherkin_report = _run_blocking_gate(
+            "gherkin",
+            lambda: analyze_gherkin_mutation(
                 feature_paths,
                 threshold=config.gherkin_threshold,
                 base_ref=gherkin_base,
@@ -83,9 +105,10 @@ def run_quality_check(
                 full_run=full_run,
                 test_cmd=config.gherkin_test_cmd,
                 runner=config.gherkin_runner,
-            )
-        except ForgeToolError as exc:
-            errors.append(f"gherkin: {exc}")
+            ),
+            gates_run=gates_run,
+            errors=errors,
+        )
 
     return build_check_report(
         gates_run=gates_run,
