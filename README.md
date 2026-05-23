@@ -87,6 +87,10 @@ mypy src
 
 See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 
+## Architecture decisions
+
+Package layout, dependency direction, and refactor conventions: [`docs/adr/0001-package-boundaries-and-refactor-conventions.md`](docs/adr/0001-package-boundaries-and-refactor-conventions.md).
+
 ## Roadmap
 
 1. Foundation & CLI shell — done
