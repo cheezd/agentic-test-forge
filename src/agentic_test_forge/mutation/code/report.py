@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+from agentic_test_forge.mutation.code.exit_codes import classify_mutmut_exit_code
 from agentic_test_forge.reporting.serialize import report_to_json, serialize_findings_report
 from agentic_test_forge.reporting.status import ReportStatus
 from agentic_test_forge.reporting.threshold import (
@@ -16,8 +17,6 @@ from agentic_test_forge.reporting.threshold import (
     build_threshold_report,
     compute_mutation_score,
 )
-
-KILLED_EXIT_CODES = {1, 3, -24}
 
 _MUTATION_LABELS = ThresholdReportLabels(
     no_selection_summary="No changed Python files require mutation testing.",
@@ -62,20 +61,6 @@ class MutationReport:
         return report_to_json(self, indent=indent)
 
 
-def _status_for_exit_code(exit_code: int | None) -> str:
-    if exit_code is None:
-        return "not_checked"
-    if exit_code in KILLED_EXIT_CODES:
-        return "killed"
-    if exit_code == 0:
-        return "survived"
-    if exit_code in {33, 34}:
-        return "skipped"
-    if exit_code in {36, 24, -24, 255, 152}:
-        return "timeout"
-    return "other"
-
-
 def parse_mutmut_meta(meta_path: Path) -> tuple[int, int]:
     """Return killed and total mutant counts from a mutmut meta file."""
     payload = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -89,7 +74,7 @@ def parse_mutmut_meta(meta_path: Path) -> tuple[int, int]:
         if raw_code is None:
             continue
         total += 1
-        if _status_for_exit_code(int(raw_code)) == "killed":
+        if classify_mutmut_exit_code(int(raw_code)) == "killed":
             killed += 1
     return killed, total
 

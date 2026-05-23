@@ -12,7 +12,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class FileManifestEntry:
-    """Manifest record for one mutated source file."""
+    """Manifest record for one tracked path (Python module or Gherkin scenario)."""
 
     content_hash: str
     score: float | None = None
@@ -20,8 +20,8 @@ class FileManifestEntry:
 
 
 @dataclass(frozen=True)
-class MutationManifest:
-    """On-disk mutation manifest."""
+class ForgeManifest:
+    """On-disk manifest envelope shared by code and Gherkin mutation gates."""
 
     files: dict[str, FileManifestEntry]
 
@@ -33,7 +33,7 @@ class MutationManifest:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> MutationManifest:
+    def from_dict(cls, payload: dict[str, Any]) -> ForgeManifest:
         raw_files = payload.get("files", {})
         if not isinstance(raw_files, dict):
             return cls(files={})
@@ -47,6 +47,10 @@ class MutationManifest:
                 last_run=_optional_str(entry.get("last_run")),
             )
         return cls(files=files)
+
+
+# Backward-compatible alias used by earlier forge releases and tests.
+MutationManifest = ForgeManifest
 
 
 def manifest_path(manifest_dir: str | Path) -> Path:
@@ -67,16 +71,24 @@ def utc_now_iso() -> str:
     return datetime.now(tz=UTC).replace(microsecond=0).isoformat()
 
 
-def load_manifest(path: Path) -> MutationManifest:
+def load_manifest(path: Path) -> ForgeManifest:
     if not path.is_file():
-        return MutationManifest(files={})
+        return ForgeManifest(files={})
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        return MutationManifest(files={})
-    return MutationManifest.from_dict(payload)
+        return ForgeManifest(files={})
+    return ForgeManifest.from_dict(payload)
 
 
-def save_manifest(path: Path, manifest: MutationManifest) -> None:
+def save_manifest(path: Path, manifest: ForgeManifest) -> None:
+    """Atomically write a manifest file.
+
+    Callers merge updated entries into ``manifest.files`` before saving.
+    Stale keys (paths removed from the repo) are **not** pruned automatically;
+    they remain until the manifest is edited manually. Differential scope still
+    ignores missing paths because git diff and filesystem walks only surface
+    current files.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = path.with_suffix(".tmp")
     temp_path.write_text(json.dumps(manifest.to_dict(), indent=2), encoding="utf-8")

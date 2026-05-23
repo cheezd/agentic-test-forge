@@ -6,7 +6,7 @@ from pathlib import Path
 
 from agentic_test_forge.manifest.store import (
     FileManifestEntry,
-    MutationManifest,
+    ForgeManifest,
     file_content_hash,
     load_manifest,
     manifest_path,
@@ -59,7 +59,7 @@ def _persist_mutation_manifest(
             score=finding.score,
             last_run=timestamp,
         )
-    save_manifest(manifest_path(manifest_dir), MutationManifest(files=updated_files))
+    save_manifest(manifest_path(manifest_dir), ForgeManifest(files=updated_files))
 
 
 def analyze_mutation(

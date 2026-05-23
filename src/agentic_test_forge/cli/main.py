@@ -101,7 +101,7 @@ def mutate(
 
 
 @app.command("check")
-def check_cmd(
+def check(
     path: str = typer.Option("src/", "--path", help="Path roots for CRAP and code mutation."),
     features_path: str = typer.Option(
         "features/",

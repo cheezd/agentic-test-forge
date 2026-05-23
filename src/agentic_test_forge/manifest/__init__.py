@@ -2,6 +2,7 @@
 
 from agentic_test_forge.manifest.store import (
     FileManifestEntry,
+    ForgeManifest,
     MutationManifest,
     file_content_hash,
     load_manifest,
@@ -11,6 +12,7 @@ from agentic_test_forge.manifest.store import (
 
 __all__ = [
     "FileManifestEntry",
+    "ForgeManifest",
     "MutationManifest",
     "file_content_hash",
     "load_manifest",
