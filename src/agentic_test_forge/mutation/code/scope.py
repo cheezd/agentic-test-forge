@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from agentic_test_forge.manifest.partition import partition_by_manifest_hash
 from agentic_test_forge.manifest.store import (
     file_content_hash,
     load_manifest,
@@ -16,6 +17,7 @@ from agentic_test_forge.scope import (
     normalize_paths,
     resolve_search_root,
     run_git_diff_names,
+    to_posix_relative,
 )
 
 
@@ -56,21 +58,13 @@ def resolve_mutation_scope(
         )
 
     manifest = load_manifest(manifest_path(manifest_dir))
-    selected: list[Path] = []
-    skipped: list[Path] = []
-
-    for filepath in candidate_files:
-        current_hash = file_content_hash(filepath)
-        key = str(filepath.relative_to(root)).replace("\\", "/")
-        previous = manifest.files.get(key)
-        if (
-            not full_run
-            and previous is not None
-            and previous.content_hash == current_hash
-        ):
-            skipped.append(filepath)
-            continue
-        selected.append(filepath)
+    selected, skipped = partition_by_manifest_hash(
+        candidate_files,
+        key_fn=lambda filepath: to_posix_relative(filepath, root),
+        hash_fn=file_content_hash,
+        manifest=manifest,
+        full_run=full_run,
+    )
 
     return ScopeResult(
         selected=tuple(selected),
