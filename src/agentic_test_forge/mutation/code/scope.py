@@ -6,6 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from agentic_test_forge.errors import ForgeToolError
 from agentic_test_forge.manifest.store import (
     file_content_hash,
     load_manifest,
@@ -13,7 +14,7 @@ from agentic_test_forge.manifest.store import (
 )
 
 
-class GitScopeError(RuntimeError):
+class GitScopeError(ForgeToolError):
     """Raised when git-based differential scope cannot be resolved."""
 
 

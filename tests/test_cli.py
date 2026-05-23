@@ -6,6 +6,7 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from agentic_test_forge.analysis.crap import CoverageDataMissingError, CrapFinding, CrapReport
+from agentic_test_forge.cli.exit_codes import ForgeExitCode
 from agentic_test_forge.cli.main import app
 from agentic_test_forge.config.models import ForgeConfig, GateConfig
 from agentic_test_forge.mutation.code import (
@@ -25,7 +26,7 @@ runner = CliRunner()
 
 def test_help_lists_subcommands() -> None:
     result = runner.invoke(app, ["--help"])
-    assert result.exit_code == 0
+    assert result.exit_code == ForgeExitCode.SUCCESS
     assert "crap" in result.stdout
     assert "mutate" in result.stdout
     assert "check" in result.stdout
@@ -52,7 +53,7 @@ def test_crap_reports_failure_when_threshold_exceeded() -> None:
     )
     with patch("agentic_test_forge.cli.main.analyze_crap", return_value=report):
         result = runner.invoke(app, ["crap", "--path", "src", "--threshold", "6"])
-    assert result.exit_code == 1
+    assert result.exit_code == ForgeExitCode.GATE_FAILURE
     assert "FAIL" in result.output
 
 
@@ -62,7 +63,7 @@ def test_crap_missing_coverage_exits_with_error() -> None:
         side_effect=CoverageDataMissingError("missing"),
     ):
         result = runner.invoke(app, ["crap"])
-    assert result.exit_code == 1
+    assert result.exit_code == ForgeExitCode.TOOL_ERROR
     assert "missing" in result.output
 
 
@@ -78,7 +79,7 @@ def test_crap_json_output(tmp_path: Path) -> None:
     json_path = tmp_path / "report.json"
     with patch("agentic_test_forge.cli.main.analyze_crap", return_value=report):
         result = runner.invoke(app, ["crap", "--json", str(json_path)])
-    assert result.exit_code == 0
+    assert result.exit_code == ForgeExitCode.SUCCESS
     assert json_path.is_file()
     assert '"tool": "crap"' in json_path.read_text(encoding="utf-8")
 
@@ -96,7 +97,7 @@ def test_check_passes_when_all_enabled_gates_pass(tmp_path: Path) -> None:
         patch("agentic_test_forge.cli.main.run_quality_check", return_value=report),
     ):
         result = runner.invoke(app, ["check"])
-    assert result.exit_code == 0
+    assert result.exit_code == ForgeExitCode.SUCCESS
     assert "PASS" in result.output
 
 
@@ -109,20 +110,20 @@ def test_check_fails_when_gate_fails() -> None:
     )
     with patch("agentic_test_forge.cli.main.run_quality_check", return_value=report):
         result = runner.invoke(app, ["check"])
-    assert result.exit_code == 1
+    assert result.exit_code == ForgeExitCode.GATE_FAILURE
 
 
 def test_check_exits_with_error_on_tool_failure() -> None:
     report = CheckReport(
         tool="check",
-        status="pass",
+        status="error",
         summary="Quality gate completed with tool error(s): 1.",
         gates_run=("mutation",),
         errors=("mutation: mutmut unavailable",),
     )
     with patch("agentic_test_forge.cli.main.run_quality_check", return_value=report):
         result = runner.invoke(app, ["check"])
-    assert result.exit_code == 2
+    assert result.exit_code == ForgeExitCode.TOOL_ERROR
     assert "mutmut unavailable" in result.output
 
 
@@ -136,7 +137,7 @@ def test_check_json_output(tmp_path: Path) -> None:
     json_path = tmp_path / "check.json"
     with patch("agentic_test_forge.cli.main.run_quality_check", return_value=report):
         result = runner.invoke(app, ["check", "--json", str(json_path)])
-    assert result.exit_code == 0
+    assert result.exit_code == ForgeExitCode.SUCCESS
     assert json_path.is_file()
     assert '"tool": "check"' in json_path.read_text(encoding="utf-8")
 
@@ -159,7 +160,7 @@ def test_mutate_gherkin_reports_failure_when_threshold_not_met() -> None:
     )
     with patch("agentic_test_forge.cli.main.analyze_gherkin_mutation", return_value=report):
         result = runner.invoke(app, ["mutate-gherkin", "--path", "features", "--threshold", "80"])
-    assert result.exit_code == 1
+    assert result.exit_code == ForgeExitCode.GATE_FAILURE
     assert "FAIL" in result.output
 
 
@@ -169,7 +170,7 @@ def test_mutate_gherkin_run_error_exits_with_error() -> None:
         side_effect=GherkinRunError("behave missing"),
     ):
         result = runner.invoke(app, ["mutate-gherkin"])
-    assert result.exit_code == 2
+    assert result.exit_code == ForgeExitCode.TOOL_ERROR
     assert "behave missing" in result.output
 
 
@@ -184,7 +185,7 @@ def test_mutate_gherkin_json_output(tmp_path: Path) -> None:
     json_path = tmp_path / "gherkin.json"
     with patch("agentic_test_forge.cli.main.analyze_gherkin_mutation", return_value=report):
         result = runner.invoke(app, ["mutate-gherkin", "--json", str(json_path)])
-    assert result.exit_code == 0
+    assert result.exit_code == ForgeExitCode.SUCCESS
     assert json_path.is_file()
     assert '"tool": "gherkin_mutation"' in json_path.read_text(encoding="utf-8")
 
@@ -207,7 +208,7 @@ def test_mutate_reports_failure_when_threshold_not_met() -> None:
     )
     with patch("agentic_test_forge.cli.main.analyze_mutation", return_value=report):
         result = runner.invoke(app, ["mutate", "--path", "src", "--threshold", "80"])
-    assert result.exit_code == 1
+    assert result.exit_code == ForgeExitCode.GATE_FAILURE
     assert "FAIL" in result.output
 
 
@@ -217,7 +218,7 @@ def test_mutate_unavailable_exits_with_error() -> None:
         side_effect=MutationUnavailableError("mutmut unavailable"),
     ):
         result = runner.invoke(app, ["mutate"])
-    assert result.exit_code == 2
+    assert result.exit_code == ForgeExitCode.TOOL_ERROR
     assert "mutmut unavailable" in result.output
 
 
@@ -232,6 +233,6 @@ def test_mutate_json_output(tmp_path: Path) -> None:
     json_path = tmp_path / "mutation.json"
     with patch("agentic_test_forge.cli.main.analyze_mutation", return_value=report):
         result = runner.invoke(app, ["mutate", "--json", str(json_path)])
-    assert result.exit_code == 0
+    assert result.exit_code == ForgeExitCode.SUCCESS
     assert json_path.is_file()
     assert '"tool": "mutation"' in json_path.read_text(encoding="utf-8")

@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+from agentic_test_forge.reporting.status import GatePolicy
+
 CrapFormula = Literal["standard", "simplified"]
 GherkinRunner = Literal["behave", "pytest"]
 
@@ -17,6 +19,13 @@ class GateConfig:
     mutation: bool = False
     gherkin: bool = False
     dry: bool = False
+
+    @staticmethod
+    def policy_for(gate: str) -> GatePolicy:
+        """Return whether a gate is advisory or blocking in ``forge check``."""
+        if gate == "dry":
+            return GatePolicy.ADVISORY
+        return GatePolicy.BLOCKING
 
 
 @dataclass(frozen=True)

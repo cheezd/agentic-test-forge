@@ -7,18 +7,16 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from agentic_test_forge.analysis.crap import CoverageDataMissingError, analyze_crap
+from agentic_test_forge.analysis.crap import analyze_crap
+from agentic_test_forge.cli.exit_codes import (
+    exit_for_check_report,
+    exit_for_report_status,
+    exit_for_tool_error,
+)
 from agentic_test_forge.config import load_config
-from agentic_test_forge.mutation.code import (
-    GitScopeError,
-    MutationUnavailableError,
-    MutmutRunError,
-    analyze_mutation,
-)
-from agentic_test_forge.mutation.gherkin import (
-    GherkinRunError,
-    analyze_gherkin_mutation,
-)
+from agentic_test_forge.errors import ForgeToolError
+from agentic_test_forge.mutation.code import analyze_mutation
+from agentic_test_forge.mutation.gherkin import analyze_gherkin_mutation
 from agentic_test_forge.orchestration import run_quality_check
 from agentic_test_forge.reporting.console import (
     print_check_report,
@@ -65,9 +63,8 @@ def crap(
             formula=config.crap_formula,
             coverage_file=coverage_file,
         )
-    except CoverageDataMissingError as exc:
-        console.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(code=1) from exc
+    except ForgeToolError as exc:
+        exit_for_tool_error(exc, console)
 
     print_crap_report(report, console)
 
@@ -75,8 +72,7 @@ def crap(
         Path(json_output).write_text(report.to_json(), encoding="utf-8")
         console.print(f"JSON report written to [bold]{json_output}[/bold]")
 
-    if report.status == "fail":
-        raise typer.Exit(code=1)
+    exit_for_report_status(report.status)
 
 
 @app.command()
@@ -117,9 +113,8 @@ def mutate(
             full_run=full,
             test_cmd=config.mutation_test_cmd,
         )
-    except (GitScopeError, MutationUnavailableError, MutmutRunError) as exc:
-        console.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(code=2) from exc
+    except ForgeToolError as exc:
+        exit_for_tool_error(exc, console)
 
     print_mutation_report(report, console)
 
@@ -127,8 +122,7 @@ def mutate(
         Path(json_output).write_text(report.to_json(), encoding="utf-8")
         console.print(f"JSON report written to [bold]{json_output}[/bold]")
 
-    if report.status == "fail":
-        raise typer.Exit(code=1)
+    exit_for_report_status(report.status)
 
 
 @app.command("check")
@@ -177,13 +171,7 @@ def check_cmd(
         Path(json_output).write_text(report.to_json(), encoding="utf-8")
         console.print(f"JSON report written to [bold]{json_output}[/bold]")
 
-    if report.errors:
-        for error in report.errors:
-            console.print(f"[red]Error:[/red] {error}")
-        raise typer.Exit(code=2)
-
-    if report.status == "fail":
-        raise typer.Exit(code=1)
+    exit_for_check_report(report, console)
 
 
 @app.command("mutate-gherkin")
@@ -225,9 +213,8 @@ def mutate_gherkin(
             test_cmd=config.gherkin_test_cmd,
             runner=config.gherkin_runner,
         )
-    except (GitScopeError, GherkinRunError) as exc:
-        console.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(code=2) from exc
+    except ForgeToolError as exc:
+        exit_for_tool_error(exc, console)
 
     print_gherkin_mutation_report(report, console)
 
@@ -235,8 +222,7 @@ def mutate_gherkin(
         Path(json_output).write_text(report.to_json(), encoding="utf-8")
         console.print(f"JSON report written to [bold]{json_output}[/bold]")
 
-    if report.status == "fail":
-        raise typer.Exit(code=1)
+    exit_for_report_status(report.status)
 
 
 def run() -> None:

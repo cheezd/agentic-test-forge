@@ -4,7 +4,7 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**Phase 6 (polish)** — DRY advisory gate, mutation test cmd wiring, consumer CI guide on `issue-23-phase-6-polish`.
+**Phase 6 (polish)** — complete on `main` (PR #24).
 
 | Command | Status |
 |---------|--------|
@@ -94,4 +94,4 @@ See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 3. Differential code mutation (mutmut) — done
 4. Gherkin mutation — done
 5. Quality gate orchestrator (`forge check`) — done
-6. DRY flagging, consumer CI guide, polish — in progress
+6. DRY flagging, consumer CI guide, polish — done

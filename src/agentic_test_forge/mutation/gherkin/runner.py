@@ -7,10 +7,11 @@ import subprocess
 from pathlib import Path
 
 from agentic_test_forge.config.models import GherkinRunner
+from agentic_test_forge.errors import ForgeToolError
 from agentic_test_forge.mutation.gherkin.parser import GherkinScenario
 
 
-class GherkinRunError(RuntimeError):
+class GherkinRunError(ForgeToolError):
     """Raised when the configured acceptance test command fails to execute."""
 
 

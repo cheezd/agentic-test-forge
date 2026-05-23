@@ -91,9 +91,6 @@ def test_analyze_mutation_runs_mutmut_and_updates_manifest(tmp_path: Path) -> No
             return_value=scope,
         ),
         patch(
-            "agentic_test_forge.mutation.code.analyze.temporary_mutmut_paths",
-        ),
-        patch(
             "agentic_test_forge.mutation.code.analyze.run_mutmut",
         ) as run_mock,
         patch(
@@ -109,6 +106,7 @@ def test_analyze_mutation_runs_mutmut_and_updates_manifest(tmp_path: Path) -> No
         )
 
     run_mock.assert_called_once()
+    assert run_mock.call_args.kwargs["relative_paths"] == ["src/sample.py"]
     assert report.status == "pass"
     manifest_file = tmp_path / ".forge" / "mutation-manifest.json"
     assert manifest_file.is_file()

@@ -6,19 +6,18 @@ import os
 import platform
 import subprocess
 import sys
-import tomllib
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 
 import tomli_w
 
+from agentic_test_forge.errors import ForgeToolError
 
-class MutationUnavailableError(RuntimeError):
+
+class MutationUnavailableError(ForgeToolError):
     """Raised when mutmut cannot run in the current environment."""
 
 
-class MutmutRunError(RuntimeError):
+class MutmutRunError(ForgeToolError):
     """Raised when mutmut exits with an unexpected failure."""
 
 
@@ -36,55 +35,49 @@ def ensure_mutmut_available() -> None:
         raise MutationUnavailableError(msg) from exc
 
 
-@contextmanager
-def temporary_mutmut_paths(
+def _wildcard_patterns_for_paths(relative_paths: list[str]) -> list[str]:
+    """Build mutmut CLI wildcard filters from scoped relative file paths."""
+    patterns: list[str] = []
+    for raw_path in relative_paths:
+        posix = raw_path.replace("\\", "/")
+        if posix.endswith(".py"):
+            patterns.append(f"{posix[:-3]}*")
+        else:
+            patterns.append(f"{posix.rstrip('/')}*")
+    return patterns
+
+
+def write_mutmut_run_config(
     project_root: Path,
     relative_paths: list[str],
     *,
     test_cmd: str | None = None,
-) -> Iterator[None]:
-    """Temporarily set mutmut paths_to_mutate in pyproject.toml."""
-    pyproject = project_root / "pyproject.toml"
-    backup = project_root / ".forge" / "pyproject.mutmut.bak"
-    backup.parent.mkdir(parents=True, exist_ok=True)
-
-    original_text = pyproject.read_text(encoding="utf-8") if pyproject.is_file() else None
-    if original_text is not None:
-        backup.write_text(original_text, encoding="utf-8")
-
-    data: dict[str, object] = {}
-    if pyproject.is_file():
-        loaded = tomllib.loads(original_text or "")
-        if isinstance(loaded, dict):
-            data = loaded
-
-    tool = data.setdefault("tool", {})
-    if not isinstance(tool, dict):
-        tool = {}
-        data["tool"] = tool
-    mutmut_section = tool.setdefault("mutmut", {})
-    if not isinstance(mutmut_section, dict):
-        mutmut_section = {}
-        tool["mutmut"] = mutmut_section
-    mutmut_section["paths_to_mutate"] = relative_paths
+) -> Path:
+    """Persist forge-owned mutmut run metadata under ``.forge/`` (audit only)."""
+    config_path = project_root / ".forge" / "mutmut-run.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    mutmut_section: dict[str, object] = {"source_paths": relative_paths}
     if test_cmd is not None:
-        mutmut_section["runner"] = test_cmd
-
-    pyproject.write_text(tomli_w.dumps(data), encoding="utf-8")
-    try:
-        yield
-    finally:
-        if original_text is None:
-            pyproject.unlink(missing_ok=True)
-        else:
-            pyproject.write_text(original_text, encoding="utf-8")
+        mutmut_section["mutation_test_cmd"] = test_cmd
+    payload = {"tool": {"mutmut": mutmut_section}}
+    config_path.write_text(tomli_w.dumps(payload), encoding="utf-8")
+    return config_path
 
 
-def run_mutmut(project_root: Path) -> None:
+def run_mutmut(
+    project_root: Path,
+    *,
+    relative_paths: list[str],
+    test_cmd: str | None = None,
+) -> None:
+    """Run mutmut for scoped paths without mutating the consumer pyproject.toml."""
     ensure_mutmut_available()
+    write_mutmut_run_config(project_root, relative_paths, test_cmd=test_cmd)
+    wildcards = _wildcard_patterns_for_paths(relative_paths)
     env = os.environ.copy()
+    run_cmd = [sys.executable, "-m", "mutmut", "run", *wildcards]
     completed = subprocess.run(
-        [sys.executable, "-m", "mutmut", "run"],
+        run_cmd,
         cwd=project_root,
         env=env,
         check=False,

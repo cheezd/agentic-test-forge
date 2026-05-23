@@ -6,9 +6,9 @@ import ast
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
-ReportStatus = Literal["pass", "fail"]
+from agentic_test_forge.reporting.status import ReportStatus
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,7 @@ class DryReport:
     status: ReportStatus
     findings: tuple[DryFinding, ...]
     summary: str
+    advisory: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -127,7 +128,7 @@ def analyze_dry(
         summary = f"{len(findings)} potential DRY violation(s) detected (advisory)."
     return DryReport(
         tool="dry",
-        status="pass",
+        status=ReportStatus.PASS,
         findings=tuple(findings),
         summary=summary,
     )

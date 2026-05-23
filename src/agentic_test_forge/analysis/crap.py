@@ -5,18 +5,18 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import coverage
 from radon.complexity import cc_visit
 from radon.visitors import Function
 
 from agentic_test_forge.config.models import CrapFormula
+from agentic_test_forge.errors import ForgeToolError
+from agentic_test_forge.reporting.status import ReportStatus
 
-ReportStatus = Literal["pass", "fail"]
 
-
-class CoverageDataMissingError(FileNotFoundError):
+class CoverageDataMissingError(ForgeToolError, FileNotFoundError):
     """Raised when coverage data is required but not found."""
 
 
@@ -173,7 +173,7 @@ def analyze_crap(
 
     findings.sort(key=lambda item: item.crap_score, reverse=True)
     violations = [finding for finding in findings if finding.above_threshold]
-    status: ReportStatus = "fail" if violations else "pass"
+    status = ReportStatus.FAIL if violations else ReportStatus.PASS
     if not findings:
         summary = "No functions found to analyze."
     elif violations:

@@ -97,11 +97,13 @@ Use advisory thresholds initially (`crap_threshold = 50`) and ratchet down over 
 
 ## Exit codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | All enabled blocking gates passed |
-| `1` | Threshold failure in CRAP, mutation, or Gherkin gate |
-| `2` | Tool/precondition error (missing `.coverage`, git error, mutmut unavailable) |
+Defined by `ForgeExitCode` in `agentic_test_forge.cli.exit_codes` (see `docs/consumer-ci.md`):
+
+| Code | Enum | Meaning |
+|------|------|---------|
+| `0` | `SUCCESS` | All enabled blocking gates passed |
+| `1` | `GATE_FAILURE` | Threshold failure in CRAP, mutation, or Gherkin gate |
+| `2` | `TOOL_ERROR` | Tool/precondition error (missing `.coverage`, git error, mutmut unavailable) |
 
 DRY findings are **advisory** — they appear in the combined report but do not fail `forge check`.
 
