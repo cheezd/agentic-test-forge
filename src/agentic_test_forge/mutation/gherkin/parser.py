@@ -62,6 +62,7 @@ def _parse_examples_table(lines: list[str], start_index: int) -> ExamplesTable |
     if index >= len(lines):
         return None
 
+    header_line_index = index
     header = _parse_table_row(lines[index])
     if header is None:
         return None
@@ -83,7 +84,7 @@ def _parse_examples_table(lines: list[str], start_index: int) -> ExamplesTable |
         return None
 
     return ExamplesTable(
-        header_line_index=start_index + 1 if start_index + 1 < len(lines) else start_index,
+        header_line_index=header_line_index,
         header=header,
         rows=tuple(rows),
     )

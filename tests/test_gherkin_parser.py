@@ -34,6 +34,7 @@ def test_parse_feature_file_extracts_scenario_outline(tmp_path: Path) -> None:
     assert scenario.name == "Add numbers"
     assert scenario.examples is not None
     assert scenario.examples.header == ("a", "b", "result")
+    assert scenario.examples.header_line_index == 7
     assert len(scenario.examples.rows) == 1
     assert scenario.examples.rows[0].cells == ("1", "2", "3")
 

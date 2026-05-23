@@ -7,7 +7,7 @@ from pathlib import Path
 from agentic_test_forge.config.models import GherkinRunner
 from agentic_test_forge.manifest.store import (
     FileManifestEntry,
-    MutationManifest,
+    ForgeManifest,
     gherkin_manifest_path,
     load_manifest,
     save_manifest,
@@ -101,6 +101,6 @@ def analyze_gherkin_mutation(
             score=finding.score,
             last_run=timestamp,
         )
-    save_manifest(gherkin_manifest_path(manifest_dir), MutationManifest(files=updated_files))
+    save_manifest(gherkin_manifest_path(manifest_dir), ForgeManifest(files=updated_files))
 
     return report

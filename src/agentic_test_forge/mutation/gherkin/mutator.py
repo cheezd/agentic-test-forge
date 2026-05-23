@@ -6,6 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agentic_test_forge.config.models import GherkinRunner
+from agentic_test_forge.mutation.gherkin.constants import (
+    EMPTY_CELL_STRING_REPLACEMENT,
+    EMPTY_STRING_REPLACEMENT,
+    NUMBER_DELTA,
+    STRING_MUTATION_SUFFIX,
+    ZERO_REPLACEMENT,
+)
 from agentic_test_forge.mutation.gherkin.feature_editor import FeatureFileEditor
 from agentic_test_forge.mutation.gherkin.parser import GherkinScenario
 from agentic_test_forge.mutation.gherkin.report import GherkinFinding
@@ -30,10 +37,10 @@ class ExampleMutation:
 def _mutate_string(value: str) -> list[str]:
     mutations: list[str] = []
     if value:
-        mutations.append("")
-        mutations.append(f"{value}_mutated")
+        mutations.append(EMPTY_STRING_REPLACEMENT)
+        mutations.append(f"{value}{STRING_MUTATION_SUFFIX}")
     else:
-        mutations.append("mutated")
+        mutations.append(EMPTY_CELL_STRING_REPLACEMENT)
     lowered = value.lower()
     if lowered in {"true", "false"}:
         mutations.append("false" if lowered == "true" else "true")
@@ -45,10 +52,22 @@ def _mutate_number(value: str) -> list[str]:
     try:
         if "." in value:
             number = float(value)
-            mutations.extend([str(number + 1), str(number - 1), "0"])
+            mutations.extend(
+                [
+                    str(number + NUMBER_DELTA),
+                    str(number - NUMBER_DELTA),
+                    ZERO_REPLACEMENT,
+                ],
+            )
         else:
             number = int(value)
-            mutations.extend([str(number + 1), str(number - 1), "0"])
+            mutations.extend(
+                [
+                    str(number + NUMBER_DELTA),
+                    str(number - NUMBER_DELTA),
+                    ZERO_REPLACEMENT,
+                ],
+            )
     except ValueError:
         return _mutate_string(value)
     return mutations
