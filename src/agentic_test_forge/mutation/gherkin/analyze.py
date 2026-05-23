@@ -13,22 +13,18 @@ from agentic_test_forge.manifest.store import (
     save_manifest,
     utc_now_iso,
 )
-from agentic_test_forge.mutation.code.report import compute_mutation_score
-from agentic_test_forge.mutation.gherkin.mutator import (
-    apply_mutation,
-    generate_example_mutations,
-)
+from agentic_test_forge.mutation.gherkin.mutator import ScenarioMutator
 from agentic_test_forge.mutation.gherkin.parser import GherkinScenario, scenario_content_hash
 from agentic_test_forge.mutation.gherkin.report import (
     GherkinFinding,
     GherkinMutationReport,
     build_gherkin_mutation_report,
 )
-from agentic_test_forge.mutation.gherkin.runner import run_acceptance_tests
 from agentic_test_forge.mutation.gherkin.scope import resolve_gherkin_scope
+from agentic_test_forge.scope import resolve_search_root
 
 
-def _evaluate_scenario(
+def evaluate_scenario(
     scenario: GherkinScenario,
     *,
     project_root: Path,
@@ -37,48 +33,14 @@ def _evaluate_scenario(
     threshold: float,
     run_tests: bool,
 ) -> GherkinFinding:
-    mutations = generate_example_mutations(scenario)
-    if not mutations:
-        return GherkinFinding(
-            scenario_id=scenario.scenario_id,
-            score=100.0,
-            killed=0,
-            total=0,
-            above_threshold=False,
-        )
-
-    feature_path = project_root / scenario.filepath
-    original_lines = feature_path.read_text(encoding="utf-8").splitlines()
-    killed = 0
-
-    for mutation in mutations:
-        mutated_lines = apply_mutation(original_lines, scenario, mutation)
-        feature_path.write_text("\n".join(mutated_lines) + "\n", encoding="utf-8")
-        try:
-            if run_tests:
-                exit_code = run_acceptance_tests(
-                    test_cmd=test_cmd,
-                    runner=runner,
-                    scenario=scenario,
-                    project_root=project_root,
-                )
-            else:
-                exit_code = 1
-        finally:
-            feature_path.write_text("\n".join(original_lines) + "\n", encoding="utf-8")
-
-        if exit_code != 0:
-            killed += 1
-
-    total = len(mutations)
-    score = compute_mutation_score(killed, total)
-    return GherkinFinding(
-        scenario_id=scenario.scenario_id,
-        score=score,
-        killed=killed,
-        total=total,
-        above_threshold=score < threshold,
+    """Evaluate one scenario by delegating to ``ScenarioMutator``."""
+    mutator = ScenarioMutator(
+        project_root=project_root,
+        test_cmd=test_cmd,
+        runner=runner,
+        run_tests=run_tests,
     )
+    return mutator.apply_and_test(scenario, threshold=threshold)
 
 
 def analyze_gherkin_mutation(
@@ -94,7 +56,7 @@ def analyze_gherkin_mutation(
     run_tests: bool = True,
 ) -> GherkinMutationReport:
     """Run differential Gherkin mutation analysis and return a structured report."""
-    root = (search_root or Path.cwd()).resolve()
+    root = resolve_search_root(search_root)
     scope = resolve_gherkin_scope(
         paths,
         base_ref=base_ref,
@@ -113,18 +75,15 @@ def analyze_gherkin_mutation(
             selected_count=0,
         )
 
+    mutator = ScenarioMutator(
+        project_root=root,
+        test_cmd=test_cmd,
+        runner=runner,
+        run_tests=run_tests,
+    )
     findings: list[GherkinFinding] = []
     for scenario in scope.selected:
-        findings.append(
-            _evaluate_scenario(
-                scenario,
-                project_root=root,
-                test_cmd=test_cmd,
-                runner=runner,
-                threshold=threshold,
-                run_tests=run_tests,
-            ),
-        )
+        findings.append(mutator.apply_and_test(scenario, threshold=threshold))
 
     report = build_gherkin_mutation_report(
         threshold=threshold,

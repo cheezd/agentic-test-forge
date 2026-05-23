@@ -21,13 +21,14 @@ def build_test_command(
     runner: GherkinRunner,
     scenario: GherkinScenario,
     project_root: Path,
+    feature_path: Path | None = None,
 ) -> list[str]:
     """Build subprocess argv for one scenario mutation run."""
     base = shlex.split(test_cmd)
-    feature_path = project_root / scenario.filepath
+    resolved_feature = feature_path or (project_root / scenario.filepath)
     if runner == "behave":
-        return [*base, "--name", scenario.name, str(feature_path)]
-    return [*base, str(feature_path)]
+        return [*base, "--name", scenario.name, str(resolved_feature)]
+    return [*base, str(resolved_feature)]
 
 
 def run_acceptance_tests(
@@ -36,6 +37,7 @@ def run_acceptance_tests(
     runner: GherkinRunner,
     scenario: GherkinScenario,
     project_root: Path,
+    feature_path: Path | None = None,
 ) -> int:
     """Run acceptance tests and return the process exit code."""
     command = build_test_command(
@@ -43,6 +45,7 @@ def run_acceptance_tests(
         runner=runner,
         scenario=scenario,
         project_root=project_root,
+        feature_path=feature_path,
     )
     try:
         completed = subprocess.run(
