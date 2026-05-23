@@ -6,11 +6,8 @@ from agentic_test_forge.mutation.code.runner import (
     MutationUnavailableError,
     MutmutRunError,
 )
-from agentic_test_forge.mutation.code.scope import (
-    GitScopeError,
-    ScopeResult,
-    resolve_mutation_scope,
-)
+from agentic_test_forge.mutation.code.scope import ScopeResult, resolve_mutation_scope
+from agentic_test_forge.scope import GitScopeError
 
 __all__ = [
     "GitScopeError",

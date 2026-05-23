@@ -14,7 +14,8 @@ from agentic_test_forge.manifest.store import (
     manifest_path,
     save_manifest,
 )
-from agentic_test_forge.mutation.code.scope import GitScopeError, resolve_mutation_scope
+from agentic_test_forge.mutation.code.scope import resolve_mutation_scope
+from agentic_test_forge.scope import GitScopeError
 
 
 def test_resolve_scope_uses_git_diff(tmp_path: Path) -> None:
@@ -25,7 +26,7 @@ def test_resolve_scope_uses_git_diff(tmp_path: Path) -> None:
     (src / "ignored.py").write_text("y = 2\n", encoding="utf-8")
 
     with patch(
-        "agentic_test_forge.mutation.code.scope._run_git_diff",
+        "agentic_test_forge.mutation.code.scope.run_git_diff_names",
         return_value=["src/changed.py"],
     ):
         scope = resolve_mutation_scope(["src"], base_ref="main", search_root=tmp_path)
@@ -54,7 +55,7 @@ def test_resolve_scope_skips_unchanged_manifest_entries(tmp_path: Path) -> None:
     )
 
     with patch(
-        "agentic_test_forge.mutation.code.scope._run_git_diff",
+        "agentic_test_forge.mutation.code.scope.run_git_diff_names",
         return_value=["src/module.py"],
     ):
         scope = resolve_mutation_scope(
@@ -75,7 +76,7 @@ def test_resolve_scope_full_run_ignores_git(tmp_path: Path) -> None:
     module.write_text("value = 1\n", encoding="utf-8")
 
     with patch(
-        "agentic_test_forge.mutation.code.scope._run_git_diff",
+        "agentic_test_forge.mutation.code.scope.run_git_diff_names",
         side_effect=AssertionError("git should not run"),
     ):
         scope = resolve_mutation_scope(
@@ -91,7 +92,7 @@ def test_resolve_scope_full_run_ignores_git(tmp_path: Path) -> None:
 def test_resolve_scope_raises_when_git_missing(tmp_path: Path) -> None:
     with (
         patch(
-            "agentic_test_forge.mutation.code.scope._run_git_diff",
+            "agentic_test_forge.mutation.code.scope.run_git_diff_names",
             side_effect=GitScopeError("git diff failed"),
         ),
         pytest.raises(GitScopeError),

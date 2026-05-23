@@ -14,7 +14,8 @@ from agentic_test_forge.manifest.store import (
     save_manifest,
 )
 from agentic_test_forge.mutation.gherkin.parser import parse_feature_file, scenario_content_hash
-from agentic_test_forge.mutation.gherkin.scope import GitScopeError, resolve_gherkin_scope
+from agentic_test_forge.mutation.gherkin.scope import resolve_gherkin_scope
+from agentic_test_forge.scope import GitScopeError
 
 
 def test_resolve_gherkin_scope_uses_git_diff(tmp_path: Path) -> None:
@@ -27,7 +28,7 @@ def test_resolve_gherkin_scope_uses_git_diff(tmp_path: Path) -> None:
     )
 
     with patch(
-        "agentic_test_forge.mutation.gherkin.scope._run_git_diff",
+        "agentic_test_forge.mutation.gherkin.scope.run_git_diff_names",
         return_value=["features/sample.feature"],
     ):
         scope = resolve_gherkin_scope(
@@ -64,7 +65,7 @@ def test_resolve_gherkin_scope_skips_unchanged_manifest_entries(tmp_path: Path) 
     )
 
     with patch(
-        "agentic_test_forge.mutation.gherkin.scope._run_git_diff",
+        "agentic_test_forge.mutation.gherkin.scope.run_git_diff_names",
         return_value=["features/sample.feature"],
     ):
         scope = resolve_gherkin_scope(
@@ -88,7 +89,7 @@ def test_resolve_gherkin_scope_full_run_ignores_git(tmp_path: Path) -> None:
     )
 
     with patch(
-        "agentic_test_forge.mutation.gherkin.scope._run_git_diff",
+        "agentic_test_forge.mutation.gherkin.scope.run_git_diff_names",
         side_effect=AssertionError("git should not run"),
     ):
         scope = resolve_gherkin_scope(
@@ -105,7 +106,7 @@ def test_resolve_gherkin_scope_full_run_ignores_git(tmp_path: Path) -> None:
 def test_resolve_gherkin_scope_raises_when_git_missing(tmp_path: Path) -> None:
     with (
         patch(
-            "agentic_test_forge.mutation.gherkin.scope._run_git_diff",
+            "agentic_test_forge.mutation.gherkin.scope.run_git_diff_names",
             side_effect=GitScopeError("git diff failed"),
         ),
         pytest.raises(GitScopeError),
