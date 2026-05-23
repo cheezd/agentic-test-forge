@@ -11,6 +11,7 @@ from agentic_test_forge.manifest.store import (
     file_content_hash,
     load_manifest,
     manifest_path,
+    prune_stale_manifest_entries,
     save_manifest,
     utc_now_iso,
 )
@@ -99,7 +100,11 @@ def _persist_mutation_manifest(
         root=root,
         timestamp=timestamp,
     )
-    save_manifest(manifest_path(manifest_dir), ForgeManifest(files=updated_files))
+    pruned_files = prune_stale_manifest_entries(
+        updated_files,
+        key_is_valid=lambda key: (root / key).is_file(),
+    )
+    save_manifest(manifest_path(manifest_dir), ForgeManifest(files=pruned_files))
 
 
 def _empty_mutation_report(

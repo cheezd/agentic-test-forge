@@ -11,6 +11,7 @@ from agentic_test_forge.manifest.store import (
     ForgeManifest,
     gherkin_manifest_path,
     load_manifest,
+    prune_stale_manifest_entries,
     save_manifest,
     utc_now_iso,
 )
@@ -21,7 +22,11 @@ from agentic_test_forge.mutation.gherkin.report import (
     GherkinMutationReport,
     build_gherkin_mutation_report,
 )
-from agentic_test_forge.mutation.gherkin.scope import GherkinScopeResult, resolve_gherkin_scope
+from agentic_test_forge.mutation.gherkin.scope import (
+    GherkinScopeResult,
+    collect_mutable_scenario_ids,
+    resolve_gherkin_scope,
+)
 from agentic_test_forge.scope import resolve_search_root
 
 
@@ -97,6 +102,8 @@ def _updated_gherkin_manifest_files(
 
 def _persist_gherkin_manifest(
     *,
+    paths: list[str | Path],
+    root: Path,
     scenarios: Sequence[GherkinScenario],
     findings: Sequence[GherkinFinding],
     manifest_dir: str,
@@ -109,7 +116,12 @@ def _persist_gherkin_manifest(
         findings,
         timestamp=timestamp,
     )
-    save_manifest(gherkin_manifest_path(manifest_dir), ForgeManifest(files=updated_files))
+    active_scenario_ids = collect_mutable_scenario_ids(paths, search_root=root)
+    pruned_files = prune_stale_manifest_entries(
+        updated_files,
+        key_is_valid=lambda key: key in active_scenario_ids,
+    )
+    save_manifest(gherkin_manifest_path(manifest_dir), ForgeManifest(files=pruned_files))
 
 
 def _empty_gherkin_mutation_report(
@@ -188,6 +200,8 @@ def analyze_gherkin_mutation(
         selected_count=len(scope.selected),
     )
     _persist_gherkin_manifest(
+        paths=paths,
+        root=root,
         scenarios=scope.selected,
         findings=findings,
         manifest_dir=manifest_dir,

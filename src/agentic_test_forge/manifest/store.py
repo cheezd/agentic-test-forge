@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -83,16 +84,27 @@ def load_manifest(path: Path) -> ForgeManifest:
 def save_manifest(path: Path, manifest: ForgeManifest) -> None:
     """Atomically write a manifest file.
 
-    Callers merge updated entries into ``manifest.files`` before saving.
-    Stale keys (paths removed from the repo) are **not** pruned automatically;
-    they remain until the manifest is edited manually. Differential scope still
-    ignores missing paths because git diff and filesystem walks only surface
-    current files.
+    Callers merge updated entries into ``manifest.files`` and prune stale keys
+    (see ``prune_stale_manifest_entries``) before saving.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = path.with_suffix(".tmp")
     temp_path.write_text(json.dumps(manifest.to_dict(), indent=2), encoding="utf-8")
     temp_path.replace(path)
+
+
+def prune_stale_manifest_entries(
+    files: dict[str, FileManifestEntry],
+    *,
+    key_is_valid: Callable[[str], bool],
+) -> dict[str, FileManifestEntry]:
+    """Drop manifest entries whose keys no longer refer to live repo entities.
+
+    Retained entries include paths/scenarios that still exist but were not part
+    of the current differential scope (avoiding unnecessary re-runs). Removed
+    entries are orphaned keys for deleted files or removed scenarios.
+    """
+    return {key: entry for key, entry in files.items() if key_is_valid(key)}
 
 
 def _optional_float(value: object) -> float | None:

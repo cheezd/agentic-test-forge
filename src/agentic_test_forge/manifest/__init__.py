@@ -8,6 +8,7 @@ from agentic_test_forge.manifest.store import (
     file_content_hash,
     load_manifest,
     manifest_path,
+    prune_stale_manifest_entries,
     save_manifest,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "load_manifest",
     "manifest_path",
     "partition_by_manifest_hash",
+    "prune_stale_manifest_entries",
     "save_manifest",
 ]

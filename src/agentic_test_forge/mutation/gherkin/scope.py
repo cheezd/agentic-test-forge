@@ -86,3 +86,18 @@ def resolve_gherkin_scope(
         skipped_unchanged=tuple(skipped),
         base_ref=base_ref,
     )
+
+
+def collect_mutable_scenario_ids(
+    paths: list[str | Path],
+    *,
+    search_root: Path | None = None,
+) -> set[str]:
+    """Return scenario IDs with Examples tables under the configured paths."""
+    root = resolve_search_root(search_root)
+    path_roots = normalize_paths([str(p) for p in paths], root)
+    scenario_ids: set[str] = set()
+    for feature_path in iter_files_by_suffix(path_roots, ".feature"):
+        for scenario in _scenarios_with_examples(feature_path, root):
+            scenario_ids.add(scenario.scenario_id)
+    return scenario_ids
