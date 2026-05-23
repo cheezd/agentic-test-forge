@@ -7,6 +7,7 @@ from agentic_test_forge.scope.paths import (
     iter_files_by_suffix,
     normalize_paths,
     resolve_search_root,
+    to_posix_relative,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "normalize_paths",
     "resolve_search_root",
     "run_git_diff_names",
+    "to_posix_relative",
 ]

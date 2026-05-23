@@ -2,24 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import typer
 from rich.console import Console
 
 from agentic_test_forge.analysis.crap import analyze_crap
-from agentic_test_forge.cli.exit_codes import (
-    exit_for_check_report,
-    exit_for_report_status,
-    exit_for_tool_error,
-)
+from agentic_test_forge.cli.helpers import effective_override, run_check_command, run_report_command
 from agentic_test_forge.config import load_config
-from agentic_test_forge.errors import ForgeToolError
 from agentic_test_forge.mutation.code import analyze_mutation
 from agentic_test_forge.mutation.gherkin import analyze_gherkin_mutation
 from agentic_test_forge.orchestration import run_quality_check
 from agentic_test_forge.reporting.console import (
-    print_check_report,
     print_crap_report,
     print_gherkin_mutation_report,
     print_mutation_report,
@@ -54,25 +46,17 @@ def crap(
 ) -> None:
     """Analyze cyclomatic complexity and coverage (CRAP scores)."""
     config = load_config()
-    effective_threshold = threshold if threshold is not None else config.crap_threshold
-
-    try:
-        report = analyze_crap(
+    run_report_command(
+        analyze=lambda: analyze_crap(
             [path],
-            threshold=effective_threshold,
+            threshold=effective_override(threshold, config.crap_threshold),
             formula=config.crap_formula,
             coverage_file=coverage_file,
-        )
-    except ForgeToolError as exc:
-        exit_for_tool_error(exc, console)
-
-    print_crap_report(report, console)
-
-    if json_output:
-        Path(json_output).write_text(report.to_json(), encoding="utf-8")
-        console.print(f"JSON report written to [bold]{json_output}[/bold]")
-
-    exit_for_report_status(report.status)
+        ),
+        print_report=print_crap_report,
+        console=console,
+        json_output=json_output,
+    )
 
 
 @app.command()
@@ -101,28 +85,19 @@ def mutate(
 ) -> None:
     """Run differential code mutation testing (mutmut)."""
     config = load_config()
-    effective_threshold = threshold if threshold is not None else config.mutation_threshold
-    effective_base = base if base is not None else config.mutation_base_ref
-
-    try:
-        report = analyze_mutation(
+    run_report_command(
+        analyze=lambda: analyze_mutation(
             [path],
-            threshold=effective_threshold,
-            base_ref=effective_base,
+            threshold=effective_override(threshold, config.mutation_threshold),
+            base_ref=effective_override(base, config.mutation_base_ref),
             manifest_dir=config.manifest_dir,
             full_run=full,
             test_cmd=config.mutation_test_cmd,
-        )
-    except ForgeToolError as exc:
-        exit_for_tool_error(exc, console)
-
-    print_mutation_report(report, console)
-
-    if json_output:
-        Path(json_output).write_text(report.to_json(), encoding="utf-8")
-        console.print(f"JSON report written to [bold]{json_output}[/bold]")
-
-    exit_for_report_status(report.status)
+        ),
+        print_report=print_mutation_report,
+        console=console,
+        json_output=json_output,
+    )
 
 
 @app.command("check")
@@ -156,22 +131,18 @@ def check_cmd(
 ) -> None:
     """Run the full quality gate (CRAP -> mutation -> Gherkin)."""
     config = load_config()
-    report = run_quality_check(
-        config,
-        paths=[path],
-        gherkin_paths=[features_path],
-        coverage_file=coverage_file,
-        base_ref=base,
-        full_run=full,
+    run_check_command(
+        analyze=lambda: run_quality_check(
+            config,
+            paths=[path],
+            gherkin_paths=[features_path],
+            coverage_file=coverage_file,
+            base_ref=base,
+            full_run=full,
+        ),
+        console=console,
+        json_output=json_output,
     )
-
-    print_check_report(report, console)
-
-    if json_output:
-        Path(json_output).write_text(report.to_json(), encoding="utf-8")
-        console.print(f"JSON report written to [bold]{json_output}[/bold]")
-
-    exit_for_check_report(report, console)
 
 
 @app.command("mutate-gherkin")
@@ -200,29 +171,20 @@ def mutate_gherkin(
 ) -> None:
     """Mutate Gherkin Examples and run acceptance tests."""
     config = load_config()
-    effective_threshold = threshold if threshold is not None else config.gherkin_threshold
-    effective_base = base if base is not None else config.gherkin_base_ref
-
-    try:
-        report = analyze_gherkin_mutation(
+    run_report_command(
+        analyze=lambda: analyze_gherkin_mutation(
             [path],
-            threshold=effective_threshold,
-            base_ref=effective_base,
+            threshold=effective_override(threshold, config.gherkin_threshold),
+            base_ref=effective_override(base, config.gherkin_base_ref),
             manifest_dir=config.manifest_dir,
             full_run=full,
             test_cmd=config.gherkin_test_cmd,
             runner=config.gherkin_runner,
-        )
-    except ForgeToolError as exc:
-        exit_for_tool_error(exc, console)
-
-    print_gherkin_mutation_report(report, console)
-
-    if json_output:
-        Path(json_output).write_text(report.to_json(), encoding="utf-8")
-        console.print(f"JSON report written to [bold]{json_output}[/bold]")
-
-    exit_for_report_status(report.status)
+        ),
+        print_report=print_gherkin_mutation_report,
+        console=console,
+        json_output=json_output,
+    )
 
 
 def run() -> None:

@@ -48,3 +48,35 @@ def unique(value):
 
     assert report.findings == ()
     assert "No duplicate" in report.summary
+
+
+def test_analyze_dry_uses_class_qualified_names(tmp_path: Path) -> None:
+    package = tmp_path / "src"
+    package.mkdir()
+    (package / "models.py").write_text(
+        """
+class Widget:
+    def duplicate(self, x):
+        return x + 1
+
+    def also_duplicate(self, x):
+        return x + 1
+""".strip(),
+        encoding="utf-8",
+    )
+
+    report = analyze_dry(["src"], search_root=tmp_path)
+
+    assert len(report.findings) == 1
+    assert report.findings[0].qualified_name.startswith("Widget.")
+
+
+def test_analyze_dry_records_skipped_parse_files(tmp_path: Path) -> None:
+    package = tmp_path / "src"
+    package.mkdir()
+    bad_file = package / "broken.py"
+    bad_file.write_text("def oops(:\n", encoding="utf-8")
+
+    report = analyze_dry(["src"], search_root=tmp_path)
+
+    assert str(bad_file) in report.skipped_parse_files

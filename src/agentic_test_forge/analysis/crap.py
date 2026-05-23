@@ -111,24 +111,13 @@ def _match_coverage_path(data: coverage.CoverageData, filepath: Path) -> str | N
     return None
 
 
-def analyze_crap(
-    paths: list[str | Path],
+def _collect_crap_findings(
+    python_files: list[Path],
+    data: coverage.CoverageData,
     *,
     threshold: float,
-    formula: CrapFormula = "standard",
-    coverage_file: str | Path = ".coverage",
-    search_root: Path | None = None,
-) -> CrapReport:
-    """Analyze Python functions under paths and return a CRAP report."""
-    root = resolve_search_root(search_root)
-    resolved_paths = normalize_paths([str(path) for path in paths], root)
-    python_files = iter_files_by_suffix(resolved_paths, ".py")
-    coverage_path = _resolve_coverage_path(Path(coverage_file), root)
-
-    cov = coverage.Coverage(data_file=str(coverage_path))
-    cov.load()
-    data = cov.get_data()
-
+    formula: CrapFormula,
+) -> list[CrapFinding]:
     findings: list[CrapFinding] = []
     for filepath in python_files:
         source = filepath.read_text(encoding="utf-8")
@@ -154,8 +143,16 @@ def analyze_crap(
                     above_threshold=score > threshold,
                 ),
             )
-
     findings.sort(key=lambda item: item.crap_score, reverse=True)
+    return findings
+
+
+def _build_crap_report(
+    findings: list[CrapFinding],
+    *,
+    threshold: float,
+    formula: CrapFormula,
+) -> CrapReport:
     violations = [finding for finding in findings if finding.above_threshold]
     status = ReportStatus.FAIL if violations else ReportStatus.PASS
     if not findings:
@@ -164,7 +161,6 @@ def analyze_crap(
         summary = f"{len(violations)} function(s) exceed CRAP threshold {threshold}."
     else:
         summary = f"All {len(findings)} function(s) are at or below CRAP threshold {threshold}."
-
     return CrapReport(
         tool="crap",
         status=status,
@@ -173,3 +169,28 @@ def analyze_crap(
         findings=tuple(findings),
         summary=summary,
     )
+
+
+def analyze_crap(
+    paths: list[str | Path],
+    *,
+    threshold: float,
+    formula: CrapFormula = "standard",
+    coverage_file: str | Path = ".coverage",
+    search_root: Path | None = None,
+) -> CrapReport:
+    """Analyze Python functions under paths and return a CRAP report."""
+    root = resolve_search_root(search_root)
+    resolved_paths = normalize_paths([str(path) for path in paths], root)
+    python_files = iter_files_by_suffix(resolved_paths, ".py")
+    coverage_path = _resolve_coverage_path(Path(coverage_file), root)
+
+    cov = coverage.Coverage(data_file=str(coverage_path))
+    cov.load()
+    findings = _collect_crap_findings(
+        python_files,
+        cov.get_data(),
+        threshold=threshold,
+        formula=formula,
+    )
+    return _build_crap_report(findings, threshold=threshold, formula=formula)
