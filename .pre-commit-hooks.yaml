@@ -1,0 +1,8 @@
+- id: forge-check
+  name: forge check
+  description: Run agentic-test-forge quality gates configured in [tool.forge.gates]
+  entry: forge check
+  language: python
+  pass_filenames: false
+  types: [python]
+  additional_dependencies: [agentic-test-forge==1.0.0]

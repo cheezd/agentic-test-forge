@@ -1,0 +1,14 @@
+[project]
+name = "pre-commit-no-coverage-fixture"
+version = "0.0.0"
+requires-python = ">=3.11"
+
+[tool.forge]
+paths = ["src"]
+crap_threshold = 30
+
+[tool.forge.gates]
+crap = true
+mutation = false
+gherkin = false
+dry = false

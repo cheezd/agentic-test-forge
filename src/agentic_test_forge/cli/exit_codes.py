@@ -13,6 +13,7 @@ from typing import NoReturn
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 
 from agentic_test_forge.errors import ForgeToolError
 from agentic_test_forge.orchestration.report import CheckReport
@@ -29,7 +30,7 @@ class ForgeExitCode(IntEnum):
 
 def exit_for_tool_error(exc: ForgeToolError, console: Console) -> NoReturn:
     """Print a tool error and exit with TOOL_ERROR."""
-    console.print(f"[red]Error:[/red] {exc}")
+    console.print(f"[red]Error:[/red] {escape(str(exc))}")
     raise typer.Exit(code=ForgeExitCode.TOOL_ERROR) from exc
 
 
@@ -43,6 +44,6 @@ def exit_for_check_report(report: CheckReport, console: Console) -> None:
     """Exit based on combined check report errors and gate status."""
     if report.errors or report.status == ReportStatus.ERROR:
         for error in report.errors:
-            console.print(f"[red]Error:[/red] {error}")
+            console.print(f"[red]Error:[/red] {escape(error)}")
         raise typer.Exit(code=ForgeExitCode.TOOL_ERROR)
     exit_for_report_status(report.status)

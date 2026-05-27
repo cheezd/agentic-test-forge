@@ -93,6 +93,29 @@ rely on `pyproject.toml` only.
 
 Consumer CI integration: see [`docs/consumer-ci.md`](docs/consumer-ci.md).
 
+### Pre-commit (optional)
+
+Run `forge check` locally before commit (respects `[tool.forge.gates]`):
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/cheezd/agentic-test-forge
+    rev: v1.0.0
+    hooks:
+      - id: forge-check
+```
+
+```bash
+pip install pre-commit agentic-test-forge==1.0.0
+pre-commit install
+pytest --cov=src   # CRAP gate needs .coverage
+pre-commit run forge-check --all-files
+```
+
+See [consumer-ci — pre-commit](docs/consumer-ci.md#pre-commit-hook) for coverage
+prerequisites, Windows/mutation notes, and troubleshooting.
+
 ## Development
 
 ```bash

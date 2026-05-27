@@ -71,6 +71,19 @@ def test_exit_for_check_report_tool_error_when_errors_present() -> None:
     assert exc_info.value.exit_code == ForgeExitCode.TOOL_ERROR
 
 
+def test_exit_for_check_report_escapes_rich_markup_in_errors() -> None:
+    report = CheckReport(
+        tool="check",
+        status=ReportStatus.ERROR,
+        summary="errors",
+        gates_run=("mutation",),
+        errors=("git diff failed: use 'git <command> [<revision>...] -- [<file>...]'",),
+    )
+    with pytest.raises(typer.Exit) as exc_info:
+        exit_for_check_report(report, Console(record=True))
+    assert exc_info.value.exit_code == ForgeExitCode.TOOL_ERROR
+
+
 def test_cli_crap_missing_coverage_uses_forge_exit_code() -> None:
     from unittest.mock import patch
 
