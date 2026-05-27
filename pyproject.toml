@@ -8,11 +8,12 @@ version = "1.0.0"
 description = "Python quality workflow for agentic AI-driven development (CRAP, mutation, Gherkin gates)"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "MIT"
+license = "GPL-3.0-or-later"
 authors = [{ name = "cheezd" }]
 keywords = ["testing", "quality", "mutation", "crap", "gherkin", "cli"]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",

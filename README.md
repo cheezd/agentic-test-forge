@@ -110,6 +110,12 @@ See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 
 Package layout, dependency direction, and refactor conventions: [`docs/adr/0001-package-boundaries-and-refactor-conventions.md`](docs/adr/0001-package-boundaries-and-refactor-conventions.md).
 
+## License
+
+Licensed under the [GNU General Public License v3.0 or later](LICENSE) (GPL-3.0-or-later).
+
+When used as a **CLI tool in CI** (e.g. `forge check` in a pipeline), consumer application code is typically not a derivative work of forge. If you **import and embed** forge as a library in a distributed product, GPL obligations may apply — review with your legal counsel or consider whether LGPL fits your use case better.
+
 ## Roadmap
 
 1. Foundation & CLI shell — done

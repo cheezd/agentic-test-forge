@@ -22,6 +22,7 @@ First public release on PyPI. v1.0 library scope (Phases 1–6) is complete on `
 ### Notes
 
 - Classifier: **Beta** (`Development Status :: 4 - Beta`)
+- License: **GPL-3.0-or-later** (see `LICENSE`)
 - Install: `pip install agentic-test-forge==1.0.0`
 - Mutation testing requires Linux or WSL (mutmut does not run natively on Windows)
 
