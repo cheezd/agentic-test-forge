@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-test-forge"
-version = "0.1.0"
+version = "1.0.0"
 description = "Python quality workflow for agentic AI-driven development (CRAP, mutation, Gherkin gates)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,7 +12,7 @@ license = "MIT"
 authors = [{ name = "cheezd" }]
 keywords = ["testing", "quality", "mutation", "crap", "gherkin", "cli"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -42,7 +42,9 @@ dev = [
 forge = "agentic_test_forge.cli.main:run"
 
 [project.urls]
+Homepage = "https://github.com/cheezd/agentic-test-forge"
 Repository = "https://github.com/cheezd/agentic-test-forge"
+Documentation = "https://github.com/cheezd/agentic-test-forge/blob/main/docs/consumer-ci.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentic_test_forge"]

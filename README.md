@@ -4,7 +4,7 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**Phase 6 (polish)** — complete on `main` (PR #24).
+**v1.1 Phase A** — PyPI publish in progress ([#64](https://github.com/cheezd/agentic-test-forge/issues/64)).
 
 | Command | Status |
 |---------|--------|
@@ -16,10 +16,22 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 ## Install
 
 ```bash
+pip install agentic-test-forge
+```
+
+Pin a version:
+
+```bash
+pip install agentic-test-forge==1.0.0
+```
+
+For local development of this repo:
+
+```bash
 pip install -e ".[dev]"
 ```
 
-Consumer repos can install from VCS until PyPI publish:
+Alternative (VCS install):
 
 ```bash
 pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git"
