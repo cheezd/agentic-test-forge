@@ -110,6 +110,18 @@ See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 
 Package layout, dependency direction, and refactor conventions: [`docs/adr/0001-package-boundaries-and-refactor-conventions.md`](docs/adr/0001-package-boundaries-and-refactor-conventions.md).
 
+## License
+
+Licensed under the [GNU Lesser General Public License v3.0 or later](LICENSE) (LGPL-3.0-or-later).
+
+**What this means in practice:**
+
+- **Modifications to forge** must be shared under LGPL when you distribute them.
+- **Using forge to check your code** — via CLI in CI, locally, or on build servers — does **not** require your application or SaaS product to become open source.
+- **Importing forge as a library** in a proprietary product is generally permitted under LGPL (unlike GPL), subject to LGPL’s requirements (e.g. allowing replacement of the library).
+
+We deliberately use **LGPL, not AGPL**, so network/SaaS deployment of your product does not trigger additional copyleft beyond the library itself. This is not legal advice; consult counsel for your specific deployment.
+
 ## Roadmap
 
 1. Foundation & CLI shell — done
