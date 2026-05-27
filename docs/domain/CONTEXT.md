@@ -20,8 +20,11 @@ The tool integrates with existing pytest/behave workflows rather than replacing 
 |----------------|------------|-------------------------|
 | **Forge** | The CLI entrypoint and overall tool (`forge` command). | Generic "build" or "compile" |
 | **Quality gate** | Orchestrated check (`forge check`) running coverage → CRAP → mutation with configurable thresholds; exits non-zero on failure. | A single linter or test run |
-| **CRAP score** | Change Risk Anti-Patterns score per function/module: `complexity × (1 - coverage)² + complexity` (standard formula) or simplified variant `complexity + (1 - coverage)³` as configured. | Cyclomatic complexity alone |
-| **CRAP threshold** | Maximum allowed CRAP score before flagging (default TBD, prompt suggests 6). | Coverage percentage threshold |
+| **CRAP score** | Change Risk Anti-Patterns score per function: `complexity² × (1 - coverage)³ + complexity` (standard formula) or simplified variant `complexity + (1 - coverage)³` as configured. Coverage is a 0–1 fraction of executable lines in the function body. | Cyclomatic complexity alone |
+| **CRAP threshold** | Maximum allowed CRAP score per function before flagging (default `30`). Fail when `crap_score > threshold`. | Coverage percentage threshold |
+| **Mutation score** | Percentage of mutants killed by tests: `(killed / total) × 100`. Reported per file (code) or per scenario (Gherkin) and as an aggregate. | Code coverage percentage |
+| **Mutation threshold** | Minimum required mutation score (default `80`, range 0–100). Fail when score **or** aggregate score is **below** threshold. | CRAP score ceiling |
+| **Gherkin threshold** | Same semantics as mutation threshold, applied to Gherkin scenario mutations (default `80`). | CRAP score ceiling |
 | **Mutation testing** | Introduce small code/scenario changes; tests should fail if they truly validate behavior. | Fuzz testing or property-based testing |
 | **Differential mutation** | Run mutation only on changed functions (code) or scenarios (Gherkin), identified via git diff and/or content hashes. | Full-suite mutation every run |
 | **Forge hash / manifest** | Stable content hash stored inline (`# forge-hash: abc123`) or in a manifest file to skip unchanged units in differential runs. On save, stale entries for deleted files or removed scenarios are pruned; existing but out-of-scope entries are retained. | Git commit SHA |
@@ -33,6 +36,70 @@ The tool integrates with existing pytest/behave workflows rather than replacing 
 | **DRY violation** | Detected duplication signal (basic radon or simple AST checks); advisory, not blocking by default. | CRAP or mutation failure |
 
 Aliases: `agentic-test-forge` (distribution name) → package `agentic_test_forge`.
+
+---
+
+## Score interpretation
+
+Forge reports several related metrics. Threshold config keys (`crap_threshold`, `mutation_threshold`, `gherkin_threshold`) set CI gate cutoffs; the bands below help interpret raw values when triaging findings.
+
+### Cyclomatic complexity (radon)
+
+Shown in `forge crap` output as **Complexity** per function. Radon assigns one point per decision path (branches, loops, comprehensions, etc.).
+
+| Complexity | Risk level | Interpretation & recommendations |
+|------------|------------|----------------------------------|
+| 1–10 | Low | Simple and straightforward. Easy to understand, test, and maintain. Ideal range. |
+| 11–20 | Moderate | Becoming complex. Still manageable but should be monitored. Consider breaking down large functions. |
+| 21–50 | High | Very complex. High chance of bugs. Difficult to test thoroughly. Refactoring strongly recommended. |
+| 51+ | Very high | Extremely complex. Hard to test fully. Must be refactored or decomposed. |
+
+### Function coverage (CRAP input)
+
+Shown in `forge crap` output as **Coverage** (percentage of executable lines in the function body). Used with complexity to compute CRAP.
+
+| Coverage | Risk level | Interpretation & recommendations |
+|----------|------------|----------------------------------|
+| 100% | Low | Function body fully exercised by tests. |
+| 80–99% | Low–moderate | Mostly covered; inspect uncovered branches or edge paths. |
+| 50–79% | Moderate–high | Significant gaps; CRAP rises quickly as complexity increases. Add targeted tests. |
+| 1–49% | High | Poorly tested relative to structure; prioritize tests before adding behavior. |
+| 0% | Very high | Untested function; any non-trivial complexity produces a high CRAP score. |
+
+### CRAP score
+
+Shown in `forge crap` output as **CRAP** per function. Combines complexity and coverage: untested complex code scores highest. Default gate: `crap_threshold = 30` (fail when any function exceeds the threshold).
+
+| CRAP score | Risk level | Interpretation & recommendations |
+|------------|------------|----------------------------------|
+| ≤ 10 | Low | Healthy function; maintain current tests when changing behavior. |
+| 11–30 | Moderate | Acceptable for many codebases; monitor if complexity is still rising. Default gate treats 30 as the upper bound. |
+| 31–50 | High | Over the usual “CRAP” line; refactor, simplify, or improve coverage. |
+| 51+ | Very high | Dangerous change-risk hotspot; refactor and test before further feature work. |
+
+With **full coverage**, standard-formula CRAP equals cyclomatic complexity (e.g. complexity 10 → CRAP 10). Low coverage amplifies CRAP superlinearly for complex functions.
+
+### Mutation score (code and Gherkin)
+
+Shown in `forge mutate` / `forge mutate-gherkin` output as **Score** (`killed / total`, 0–100%). Measures whether tests detect intentional behavior changes—not line coverage. Default gate: `mutation_threshold = 80` / `gherkin_threshold = 80` (fail when score is below the threshold).
+
+| Mutation score | Risk level | Interpretation & recommendations |
+|----------------|------------|----------------------------------|
+| 90–100% | Low | Strong tests; mutants are consistently detected. |
+| 80–89% | Moderate | Meets the default gate; review surviving mutants for weak assertions or missing cases. |
+| 60–79% | High | Tests pass despite many behavior changes; strengthen assertions and edge-case coverage. |
+| 40–59% | Very high | Tests likely check implementation details or happy paths only. |
+| < 40% | Critical | Tests provide little behavioral protection; treat as a testing gap, not a tuning issue. |
+
+Gates evaluate **per file or scenario** and the **aggregate** score across mutated units—either failing is a gate failure.
+
+### Choosing thresholds
+
+| Config key | Direction | Typical starting point | Rollout note |
+|------------|-----------|------------------------|--------------|
+| `crap_threshold` | Ceiling (lower is stricter) | `30` (default) | Legacy repos may start at `50` and ratchet down (see [`consumer-ci.md`](../consumer-ci.md)). |
+| `mutation_threshold` | Floor (higher is stricter) | `80` (default) | Enable on Linux CI after CRAP is stable; raise toward `90` for critical modules. |
+| `gherkin_threshold` | Floor (higher is stricter) | `80` (default) | Same as mutation; applies to acceptance scenarios. |
 
 ---
 

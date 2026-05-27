@@ -46,6 +46,8 @@ Differential mutation uses git diff against `--base` (default `main`) and skips 
 
 Gherkin mutation mutates Examples table cells in changed `.feature` scenarios, runs the configured acceptance test command, and tracks results in `.forge/gherkin-manifest.json`.
 
+Thresholds are gate cutoffs, not comparable scales: `crap_threshold` is a **maximum** CRAP score per function; `mutation_threshold` and `gherkin_threshold` are **minimum** mutation kill rates (0–100%). See [score interpretation](docs/domain/CONTEXT.md#score-interpretation) for what the numbers mean.
+
 Configure per-project thresholds in `pyproject.toml`:
 
 ```toml

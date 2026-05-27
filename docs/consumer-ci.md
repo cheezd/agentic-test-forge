@@ -93,7 +93,7 @@ For legacy repositories, enable gates incrementally:
 2. **Week 2:** add `dry = true` — refactor obvious duplication
 3. **Week 3+:** enable `mutation` on Linux CI; then `gherkin` when BDD tests exist
 
-Use advisory thresholds initially (`crap_threshold = 50`) and ratchet down over time.
+Use advisory thresholds initially (`crap_threshold = 50`) and ratchet down over time. See [score interpretation](domain/CONTEXT.md#score-interpretation) for what CRAP and mutation values mean.
 
 ## Exit codes
 
