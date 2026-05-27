@@ -97,6 +97,7 @@ gherkin_runner = "behave"
 gherkin_paths = ["features"]
 
 [tool.forge.gates]
-crap = false
+crap = true
 mutation = false
 gherkin = false
+dry = true

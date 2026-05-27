@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentic_test_forge.mutation.gherkin.parser import parse_feature_file, scenario_content_hash
+from agentic_test_forge.mutation.gherkin.parser import (
+    parse_feature_file,
+    parse_feature_paths,
+    scenario_content_hash,
+)
 
 
 def _write_feature(tmp_path: Path, relative: str, content: str) -> Path:
@@ -197,6 +201,28 @@ def test_parse_feature_file_parses_scenario_without_examples(tmp_path: Path) -> 
     assert scenario.name == "Empty"
     assert scenario.examples is None
     assert "Given nothing happens" in scenario.block_text
+
+
+def test_parse_feature_paths_collects_from_file_and_directory(tmp_path: Path) -> None:
+    _write_feature(
+        tmp_path,
+        "features/one.feature",
+        "Feature: Demo\n\n  Scenario Outline: One\n    Examples:\n      | x |\n      | 1 |\n",
+    )
+    _write_feature(
+        tmp_path,
+        "features/nested/two.feature",
+        "Feature: Demo\n\n  Scenario Outline: Two\n    Examples:\n      | y |\n      | 2 |\n",
+    )
+    single_file = tmp_path / "features" / "one.feature"
+
+    from_file = parse_feature_paths([single_file], project_root=tmp_path)
+    from_dir = parse_feature_paths([tmp_path / "features"], project_root=tmp_path)
+
+    assert len(from_file) == 1
+    assert from_file[0].name == "One"
+    assert len(from_dir) == 2
+    assert {scenario.name for scenario in from_dir} == {"One", "Two"}
 
 
 def test_scenario_content_hash_is_stable(tmp_path: Path) -> None:
