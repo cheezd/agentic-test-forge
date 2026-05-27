@@ -35,3 +35,33 @@ jobs:
 
       - name: CLI smoke test
         run: forge --help
+
+  forge-check:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project and run tests with coverage
+        run: |
+          pip install -e ".[dev]"
+          pytest --cov=agentic_test_forge --cov-report=term-missing
+
+      - name: Install forge from PyPI
+        run: pip install agentic-test-forge==1.0.0
+
+      - name: Run forge quality gate
+        run: forge check --path src/agentic_test_forge --json forge-report.json
+
+      - name: Upload forge report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-report
+          path: forge-report.json
