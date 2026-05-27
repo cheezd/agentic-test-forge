@@ -72,7 +72,12 @@ gherkin = false
 dry = true         # advisory — does not fail forge check
 ```
 
-Optional override: `forge.toml` in the project root (merged over `pyproject.toml`).
+**Optional local override:** you do not need `forge.toml` for normal use — `[tool.forge]` in
+`pyproject.toml` is enough (including consumer repos). If present, a `forge.toml` in the
+**current working directory** is merged on top of `pyproject.toml` (useful for uncommitted
+experiments, e.g. stricter thresholds on your machine). Unlike `pyproject.toml`, forge does
+not search parent directories for `forge.toml`; run from the directory that contains it, or
+rely on `pyproject.toml` only.
 
 Consumer CI integration: see [`docs/consumer-ci.md`](docs/consumer-ci.md).
 
