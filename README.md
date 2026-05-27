@@ -6,7 +6,7 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**v1.1** — Phases A–C complete (PyPI, dogfood CI, external pilot, pre-commit hook). **Phase D** (docs polish) in progress; v1.1 nearing completion ([#58](https://github.com/cheezd/agentic-test-forge/issues/58)).
+**v1.1 complete** — PyPI, dogfood CI, external pilot, pre-commit hook, and docs polish shipped ([#58](https://github.com/cheezd/agentic-test-forge/issues/58)).
 
 | Command | Status |
 |---------|--------|
@@ -158,13 +158,13 @@ We deliberately use **LGPL, not AGPL**, so network/SaaS deployment of your produ
 5. Quality gate orchestrator (`forge check`) — done
 6. DRY flagging (advisory) — done
 
-**v1.1 (in progress — [#58](https://github.com/cheezd/agentic-test-forge/issues/58))**
+**v1.1 (shipped — [#58](https://github.com/cheezd/agentic-test-forge/issues/58))**
 
 - PyPI publish & GitHub Release — done ([#64](https://github.com/cheezd/agentic-test-forge/issues/64))
 - Dogfood CI (`forge check` + report artifact) — done ([#70](https://github.com/cheezd/agentic-test-forge/issues/70))
 - External consumer pilot (compliance-llm) — done ([#71](https://github.com/cheezd/agentic-test-forge/issues/71))
 - Pre-commit hook — done ([#74](https://github.com/cheezd/agentic-test-forge/issues/74))
-- Docs polish & ADR bootstrap — in progress ([#78](https://github.com/cheezd/agentic-test-forge/issues/78)–[#81](https://github.com/cheezd/agentic-test-forge/issues/81))
+- Docs polish & ADR bootstrap — done ([#78](https://github.com/cheezd/agentic-test-forge/issues/78)–[#81](https://github.com/cheezd/agentic-test-forge/issues/81), [#128](https://github.com/cheezd/agentic-test-forge/pull/128))
 
 **Beyond v1.1**
 
