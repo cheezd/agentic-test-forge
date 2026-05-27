@@ -20,7 +20,7 @@ The tool integrates with existing pytest/behave workflows rather than replacing 
 |----------------|------------|-------------------------|
 | **Forge** | The CLI entrypoint and overall tool (`forge` command). | Generic "build" or "compile" |
 | **Quality gate** | Orchestrated check (`forge check`) running coverage → CRAP → mutation with configurable thresholds; exits non-zero on failure. | A single linter or test run |
-| **CRAP score** | Change Risk Anti-Patterns score per function: `complexity² × (1 - coverage)³ + complexity` (standard formula) or simplified variant `complexity + (1 - coverage)³` as configured. Coverage is a 0–1 fraction of executable lines in the function body. | Cyclomatic complexity alone |
+| **CRAP score** | Change Risk Anti-Patterns (CRAP) score per function: `complexity² × (1 - coverage)³ + complexity` (standard formula) or simplified variant `complexity + (1 - coverage)³` as configured. Coverage is a 0–1 fraction of executable lines in the function body. | Cyclomatic complexity alone |
 | **CRAP threshold** | Maximum allowed CRAP score per function before flagging (default `30`). Fail when `crap_score > threshold`. | Coverage percentage threshold |
 | **Mutation score** | Percentage of mutants killed by tests: `(killed / total) × 100`. Reported per file (code) or per scenario (Gherkin) and as an aggregate. | Code coverage percentage |
 | **Mutation threshold** | Minimum required mutation score (default `80`, range 0–100). Fail when score **or** aggregate score is **below** threshold. | CRAP score ceiling |
@@ -145,6 +145,12 @@ Boundaries: Analysis does not mutate code. Mutation contexts do not compute CRAP
 
 ---
 
+## Architecture decisions
+
+Structural and policy decisions are recorded as ADRs. See the [ADR index](../adr/README.md) for when to write one, numbering, and the Context / Decision / Consequences template. [ADR 0001](../adr/0001-package-boundaries-and-refactor-conventions.md) covers package boundaries, refactor conventions, and exit-code mapping.
+
+---
+
 ## Update policy
 
-Revise CONTEXT when merged work introduces or retires nouns, moves bounded-context boundaries, or changes glossary meaning (link ADR when added).
+Revise CONTEXT when merged work introduces or retires nouns, moves bounded-context boundaries, or changes glossary meaning. Link or add an [ADR](../adr/README.md) when the change reflects a durable architectural decision.
