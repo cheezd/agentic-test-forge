@@ -11,10 +11,16 @@ Install `agentic-test-forge` into a Python consumer repository and run `forge ch
 
 ## Install
 
-Until PyPI publish, pin from Git:
+From PyPI:
 
 ```bash
-pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git@main"
+pip install agentic-test-forge==1.0.0
+```
+
+From Git (fallback):
+
+```bash
+pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git@v1.0.0"
 ```
 
 For local development:
@@ -69,7 +75,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e ".[dev]"
-          pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git@main"
+          pip install agentic-test-forge==1.0.0
 
       - name: Run tests with coverage
         run: pytest --cov=src --cov-report=xml
