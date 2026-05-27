@@ -1,10 +1,12 @@
 # agentic-test-forge
 
+[![PyPI version](https://img.shields.io/pypi/v/agentic-test-forge)](https://pypi.org/project/agentic-test-forge/)
+
 Python quality enforcement for AI-generated and legacy codebases. Implements Uncle Bob Martin's workflow: **CRAP analysis**, **mutation testing**, and **Gherkin scenario mutation**, optimized for agentic development and CI gates.
 
 ## Status
 
-**v1.1 Phase A** — PyPI publish in progress ([#64](https://github.com/cheezd/agentic-test-forge/issues/64)).
+**v1.1** — Phases A–C complete (PyPI, dogfood CI, external pilot, pre-commit hook). **Phase D** (docs polish) in progress; v1.1 nearing completion ([#58](https://github.com/cheezd/agentic-test-forge/issues/58)).
 
 | Command | Status |
 |---------|--------|
@@ -91,7 +93,7 @@ experiments, e.g. stricter thresholds on your machine). Unlike `pyproject.toml`,
 not search parent directories for `forge.toml`; run from the directory that contains it, or
 rely on `pyproject.toml` only.
 
-Consumer CI integration: see [`docs/consumer-ci.md`](docs/consumer-ci.md).
+Consumer CI integration: see [`docs/consumer-ci.md`](docs/consumer-ci.md) (GitHub Actions, [version pinning](docs/consumer-ci.md#version-pinning), [Django / monorepo](docs/consumer-ci.md#django-and-monorepo-appendix), [Windows console notes](docs/consumer-ci.md#windows-console-and-rich-output)).
 
 ### Pre-commit (optional)
 
@@ -131,7 +133,7 @@ See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 
 ## Architecture decisions
 
-Package layout, dependency direction, and refactor conventions: [`docs/adr/0001-package-boundaries-and-refactor-conventions.md`](docs/adr/0001-package-boundaries-and-refactor-conventions.md).
+Index and when to write ADRs: [`docs/adr/README.md`](docs/adr/README.md). Package layout, dependency direction, and refactor conventions: [`docs/adr/0001-package-boundaries-and-refactor-conventions.md`](docs/adr/0001-package-boundaries-and-refactor-conventions.md).
 
 ## License
 
@@ -147,9 +149,23 @@ We deliberately use **LGPL, not AGPL**, so network/SaaS deployment of your produ
 
 ## Roadmap
 
+**v1.0 (shipped)**
+
 1. Foundation & CLI shell — done
 2. CRAP analyzer (radon + coverage.py) — done
 3. Differential code mutation (mutmut) — done
 4. Gherkin mutation — done
 5. Quality gate orchestrator (`forge check`) — done
-6. DRY flagging, consumer CI guide, polish — done
+6. DRY flagging (advisory) — done
+
+**v1.1 (in progress — [#58](https://github.com/cheezd/agentic-test-forge/issues/58))**
+
+- PyPI publish & GitHub Release — done ([#64](https://github.com/cheezd/agentic-test-forge/issues/64))
+- Dogfood CI (`forge check` + report artifact) — done ([#70](https://github.com/cheezd/agentic-test-forge/issues/70))
+- External consumer pilot (compliance-llm) — done ([#71](https://github.com/cheezd/agentic-test-forge/issues/71))
+- Pre-commit hook — done ([#74](https://github.com/cheezd/agentic-test-forge/issues/74))
+- Docs polish & ADR bootstrap — in progress ([#78](https://github.com/cheezd/agentic-test-forge/issues/78)–[#81](https://github.com/cheezd/agentic-test-forge/issues/81))
+
+**Beyond v1.1**
+
+- Semantic DRY ([#122](https://github.com/cheezd/agentic-test-forge/issues/122)) — deferred to v1.2+

@@ -23,6 +23,20 @@ From Git (fallback):
 pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git@v1.0.0"
 ```
 
+## Version pinning
+
+Pin an exact semver in CI and pre-commit so gate behavior stays reproducible across runner images and developer machines.
+
+| Surface | Pin | Bump when |
+|---------|-----|-----------|
+| GitHub Actions / CI | `pip install agentic-test-forge==1.0.0` | A new forge release changes thresholds, exit codes, or gate semantics you rely on |
+| Pre-commit | `rev: v1.0.0` on the hook repo + `pip install agentic-test-forge==1.0.0` in docs/setup | Same as CI — align hook `rev` with the PyPI version you install |
+| Local dev | `pip install agentic-test-forge==1.0.0` or editable producer install | Optional: float latest patch (`==1.0.*`) only if you accept drift |
+
+**When to bump:** After a tagged forge release (`v1.0.1`, `v1.1.0`, …), update pins in the consumer repo in the same PR (or a follow-up) once you have validated the new version against your thresholds. Patch releases are usually drop-in; minor/major releases may need threshold or gate config review.
+
+**Dependabot:** Add `agentic-test-forge` to pip dependency updates (or Renovate). Review release notes before merging auto-bumps — ratchet thresholds and staged gates may need adjustment. Pre-commit hook `rev` is a separate ecosystem; bump it when you bump the PyPI pin.
+
 For local development:
 
 ```bash
@@ -101,6 +115,58 @@ For legacy repositories, enable gates incrementally:
 
 Use advisory thresholds initially (`crap_threshold = 50`) and ratchet down over time. See [score interpretation](domain/CONTEXT.md#score-interpretation) for what CRAP and mutation values mean.
 
+## Django and monorepo appendix
+
+Validated on the external pilot [compliance-llm-analysis-platform](https://github.com/cheezd/compliance-llm-analysis-platform) ([#43](https://github.com/cheezd/compliance-llm-analysis-platform/issues/43)). Pattern: **repo-root `[tool.forge]`**, run forge from the **application CWD** (e.g. `apps/backend`), scope application packages only.
+
+### Layout
+
+| Piece | Example (compliance-llm) |
+|-------|---------------------------|
+| Monorepo app CWD | `apps/backend` |
+| Repo-root config | `pyproject.toml` at repository root |
+| Application paths | `paths = ["analysis"]` (relative to CWD, not pyproject directory) |
+| Settings / wiring | Outside `paths` (e.g. `django_project/`) |
+
+`load_config()` walks up from the current working directory to find repo-root `pyproject.toml`. `paths` entries resolve relative to **CWD** — invoke `forge` from the directory that contains your Django app tree.
+
+### Repo-root `[tool.forge]` (pilot)
+
+```toml
+[tool.forge]
+paths = ["analysis"]
+crap_threshold = 50
+mutation_threshold = 80
+mutation_base_ref = "main"
+mutation_test_cmd = "python manage.py test tests"  # documents intent; see mutation note below
+manifest_dir = ".forge"
+
+[tool.forge.gates]
+crap = true
+dry = true
+mutation = false   # Linux CI or WSL only (mutmut)
+gherkin = false
+```
+
+**Staged gates (pilot):** CRAP + DRY on locally (including Windows); mutation off until Linux CI or WSL. **`crap_threshold = 50`** is acceptable for legacy code — ratchet toward `30` after hotspots are addressed.
+
+### Coverage and verification
+
+Django tests with `coverage.py` (not pytest-cov required for the pilot path):
+
+```bash
+cd apps/backend
+pip install agentic-test-forge==1.0.0 coverage
+coverage run --source=analysis manage.py test tests --verbosity=0
+forge check --path analysis --coverage-file .coverage
+```
+
+Use the same `--source=` scope as `[tool.forge].paths` so CRAP scores align with collected coverage.
+
+### Mutation note
+
+`mutation_test_cmd` records consumer intent; mutmut still expects pytest-oriented setup for Django projects. Keep `mutation = false` through CRAP/DRY rollout; enable mutation on **Linux CI** after a pytest-django / `[tool.mutmut]` spike ([#73](https://github.com/cheezd/agentic-test-forge/issues/73)).
+
 ## Pre-commit hook
 
 Optional local gate before commit. The hook runs `forge check` and reads the same
@@ -162,6 +228,21 @@ Keep `mutation = false` in `[tool.forge.gates]` for local pre-commit on Windows
 enabled on Windows, `forge check` exits **2** with a clear error — it does not crash.
 
 Exit codes match [CI exit codes](#exit-codes) (0 pass, 1 gate failure, 2 tool error).
+
+## Windows console and Rich output
+
+`forge` uses [Rich](https://github.com/Textualize/rich) for status symbols (pass/fail markers, tables). **PowerShell** and some CI log captures use a legacy code page; redirected logs may show `` (U+FFFD) instead of the intended glyph. The gate result and exit code are still correct — treat mojibake as a display issue, not a failed check.
+
+**Local mitigation (optional):**
+
+```powershell
+chcp 65001
+$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
+```
+
+Use a UTF-8 terminal (Windows Terminal, VS Code integrated terminal with UTF-8) when reading forge output interactively. In CI, prefer interpreting exit codes and JSON reports (`--json`) over parsing Unicode symbols from archived logs.
+
+We document this first; a `--no-color` / plain-text mode is not required for v1.1 unless pilot friction demands it.
 
 ## Exit codes
 
