@@ -1,0 +1,6 @@
+.venv/
+mutants/
+.mutmut-cache/
+.forge/
+.coverage
+__pycache__/

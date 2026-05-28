@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "forge-pilot-harness"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "behave>=1.2",
+    "coverage>=7.4",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pilot_app"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.mutmut]
+paths_to_mutate = ["src/pilot_app/"]
+tests_dir = ["tests/"]
+
+[tool.forge]
+paths = ["src/pilot_app"]
+crap_threshold = 30
+mutation_threshold = 80
+mutation_base_ref = "main"
+mutation_test_cmd = "pytest"
+gherkin_threshold = 80
+gherkin_base_ref = "main"
+gherkin_test_cmd = "python -m behave"
+gherkin_runner = "behave"
+gherkin_paths = ["features"]
+manifest_dir = ".forge"
+
+[tool.forge.gates]
+crap = true
+mutation = true
+gherkin = true
+dry = false
