@@ -10,7 +10,7 @@ import pytest
 from agentic_test_forge.mutation.code.runner import (
     MutationUnavailableError,
     MutmutRunError,
-    _wildcard_patterns_for_paths,
+    _mutmut_name_patterns_for_paths,
     ensure_mutmut_available,
     run_mutmut,
     write_mutmut_run_config,
@@ -25,9 +25,12 @@ def test_ensure_mutmut_available_raises_on_windows() -> None:
         ensure_mutmut_available()
 
 
-def test_wildcard_patterns_for_paths() -> None:
-    assert _wildcard_patterns_for_paths(["src/example.py"]) == ["src/example*"]
-    assert _wildcard_patterns_for_paths(["src\\pkg\\mod.py"]) == ["src/pkg/mod*"]
+def test_mutmut_name_patterns_for_paths() -> None:
+    assert _mutmut_name_patterns_for_paths(["src/example.py"]) == ["example.*"]
+    assert _mutmut_name_patterns_for_paths(["src\\pkg\\mod.py"]) == ["pkg.mod.*"]
+    assert _mutmut_name_patterns_for_paths(["src/pilot_app/calculator.py"]) == [
+        "pilot_app.calculator.*"
+    ]
 
 
 def test_write_mutmut_run_config_creates_forge_owned_file(tmp_path: Path) -> None:
@@ -58,6 +61,10 @@ def test_run_mutmut_passes_wildcards_without_touching_pyproject(tmp_path: Path) 
             "agentic_test_forge.mutation.code.runner.ensure_mutmut_available",
         ),
         patch(
+            "agentic_test_forge.mutation.code.runner._mutmut_argv",
+            side_effect=lambda *args: ["mutmut", *args],
+        ),
+        patch(
             "agentic_test_forge.mutation.code.runner.subprocess.run",
             return_value=ok,
         ) as run_mock,
@@ -66,8 +73,9 @@ def test_run_mutmut_passes_wildcards_without_touching_pyproject(tmp_path: Path) 
 
     assert run_mock.call_count == 2
     run_args = run_mock.call_args_list[0].args[0]
-    assert run_args[1:4] == ["-m", "mutmut", "run"]
-    assert "src/example*" in run_args
+    assert run_args[0] == "mutmut"
+    assert run_args[1] == "run"
+    assert "example.*" in run_args
     assert pyproject.read_text(encoding="utf-8") == original
     assert (tmp_path / ".forge" / "mutmut-run.toml").is_file()
 
