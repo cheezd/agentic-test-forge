@@ -131,6 +131,10 @@ mypy src
 
 See [`docs/domain/CONTEXT.md`](docs/domain/CONTEXT.md).
 
+## Gherkin authoring (agents)
+
+See [`docs/gherkin-authoring-for-agents.md`](docs/gherkin-authoring-for-agents.md) for rules agents should follow when writing `.feature` files, plus integration with the [Django Building and Testing Guides](https://github.com/cheezd/Django-Building-and-Testing-Guides) ATDD prompts.
+
 ## Architecture decisions
 
 Index and when to write ADRs: [`docs/adr/README.md`](docs/adr/README.md). Package layout, dependency direction, and refactor conventions: [`docs/adr/0001-package-boundaries-and-refactor-conventions.md`](docs/adr/0001-package-boundaries-and-refactor-conventions.md).
