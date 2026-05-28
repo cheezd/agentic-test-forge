@@ -149,7 +149,11 @@ def test_pre_commit_forge_check_tool_error_without_coverage(tmp_path: Path) -> N
 
     result = _run_pre_commit(fixture_dir, cache_dir=tmp_path / "pre-commit-cache-no-cov")
 
-    assert result.returncode == ForgeExitCode.TOOL_ERROR, result.stdout + result.stderr
+    output = result.stdout + result.stderr
+    # pre-commit returns 1 for any failed hook, even when forge exits TOOL_ERROR (2).
+    assert result.returncode == ForgeExitCode.GATE_FAILURE, output
+    assert "exit code: 2" in output
+    assert "Coverage data not found" in output
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-only mutation guard")
