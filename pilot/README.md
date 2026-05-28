@@ -48,6 +48,28 @@ From repo root:
 
 **Verified 2026-05-28:** gherkin 100% (17/17) on Windows; code mutation 100% (2/2) in WSL.
 
+## Linux CI (GitHub Actions)
+
+Dogfood mutation gates run on `ubuntu-latest` via `.github/workflows/ci.yml`:
+
+| Job | Command (from `pilot/`) |
+|-----|-------------------------|
+| `forge-mutate-pilot` | `pytest --cov=src/pilot_app tests/` then `forge mutate --path src/pilot_app --full` |
+| `forge-mutate-gherkin-pilot` | `python -m behave features/` then `forge mutate-gherkin --path features --full` |
+
+Install uses editable forge + pilot (`pip install -e ".[dev]"` and `pip install -e "./pilot[dev]"`) until the mutmut fixes ship in PyPI `1.1.0`.
+
+Local Linux smoke:
+
+```bash
+cd pilot
+pip install -e "..[dev]" -e ".[dev]"
+pytest --cov=src/pilot_app tests/
+forge mutate --path src/pilot_app --full --threshold 80
+python -m behave features/
+forge mutate-gherkin --path features --full --threshold 80
+```
+
 ## Manual commands
 
 From `pilot/` on **Windows** (gherkin):
