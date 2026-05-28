@@ -65,3 +65,63 @@ jobs:
         with:
           name: forge-report
           path: forge-report.json
+
+  forge-mutate-pilot:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install forge and pilot harness
+        run: |
+          pip install -e ".[dev]"
+          pip install -e "./pilot[dev]"
+
+      - name: Run code mutation gate on pilot
+        working-directory: pilot
+        run: |
+          pytest --cov=src/pilot_app tests/ -q
+          forge mutate --path src/pilot_app --full --threshold 80 --json ../forge-mutation-pilot-report.json
+
+      - name: Upload mutation report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-mutation-pilot-report
+          path: forge-mutation-pilot-report.json
+
+  forge-mutate-gherkin-pilot:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install forge and pilot harness
+        run: |
+          pip install -e ".[dev]"
+          pip install -e "./pilot[dev]"
+
+      - name: Run Gherkin mutation gate on pilot
+        working-directory: pilot
+        run: |
+          python -m behave features/
+          forge mutate-gherkin --path features --full --threshold 80 --json ../forge-gherkin-pilot-report.json
+
+      - name: Upload Gherkin mutation report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-gherkin-pilot-report
+          path: forge-gherkin-pilot-report.json
