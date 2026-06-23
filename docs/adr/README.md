@@ -22,7 +22,7 @@ v1.1 does **not** require new ADRs beyond the index below; optional follow-ups (
 - Status line: `Proposed` → `Accepted` | `Superseded` | `Deprecated`
 - Superseded ADRs link forward to the replacement; do not delete old files
 
-Next available serial: **0002** (reserve for release/PyPI only if it encodes a durable architectural choice).
+Next available serial: **0003**.
 
 ## Template
 
@@ -53,6 +53,7 @@ Positive and negative outcomes: migration cost, consumer impact, follow-up work.
 | ADR | Title | Status |
 |-----|-------|--------|
 | [0001](0001-package-boundaries-and-refactor-conventions.md) | Package boundaries and refactor conventions | Accepted |
+| [0002](0002-semantic-dry-detection.md) | Semantic DRY detection (dry4* parity) | Accepted |
 
 Related docs:
 

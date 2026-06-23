@@ -361,6 +361,28 @@ Use a UTF-8 terminal (Windows Terminal, VS Code integrated terminal with UTF-8) 
 
 We document this first; a `--no-color` / plain-text mode is not required for v1.1 unless pilot friction demands it.
 
+## DRY analysis (`forge dry`)
+
+Semantic DRY (v1.2, [ADR 0002](adr/0002-semantic-dry-detection.md)) reports **structural duplicate candidates** using normalized AST fingerprints and Jaccard similarity. Findings are **advisory** — exit code `0` even when duplicates are reported.
+
+Config keys (optional):
+
+```toml
+[tool.forge]
+dry_threshold = 0.82   # Jaccard minimum (default 0.82)
+dry_min_lines = 4        # skip functions shorter than this
+dry_min_nodes = 20       # skip normalized subtrees smaller than this
+```
+
+Local analysis without full `forge check`:
+
+```bash
+forge dry --path src/
+forge dry --path src/ --threshold 0.9 --json dry-report.json
+```
+
+JSON findings include `similarity_score`, `start_line`, `end_line`, and `node_count` in addition to v1 fields.
+
 ## Exit codes
 
 Defined by `ForgeExitCode` in `agentic_test_forge.cli.exit_codes`. Package layout and status/exit mapping policy: [ADR 0001](adr/0001-package-boundaries-and-refactor-conventions.md#exit-codes-and-report-status).

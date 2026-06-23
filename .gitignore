@@ -22,3 +22,9 @@ mutants/
 
 # Local project-management artifacts (see workspace/GH-*/)
 workspace/
+
+# SwarmForge pilot + Cursor MCP tool cache (local; not part of forge package)
+.swarmforge/
+.worktrees/
+swarmforge/
+mcps/

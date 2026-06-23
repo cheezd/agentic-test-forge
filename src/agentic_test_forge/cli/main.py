@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 
 from agentic_test_forge.analysis.crap import analyze_crap
+from agentic_test_forge.analysis.dry import analyze_dry
 from agentic_test_forge.cli.helpers import (
     cli_path_list,
     effective_override,
@@ -21,6 +22,7 @@ from agentic_test_forge.mutation.gherkin import analyze_gherkin_mutation
 from agentic_test_forge.orchestration import run_quality_check
 from agentic_test_forge.reporting.console import (
     print_crap_report,
+    print_dry_report,
     print_gherkin_mutation_report,
     print_mutation_report,
 )
@@ -68,6 +70,51 @@ def crap(
             coverage_file=coverage_file,
         ),
         print_report=print_crap_report,
+        console=console,
+        json_output=json_output,
+    )
+
+
+@app.command()
+def dry(
+    threshold: float | None = typer.Option(
+        None,
+        "--threshold",
+        help="Jaccard similarity threshold (overrides config).",
+    ),
+    min_lines: int | None = typer.Option(
+        None,
+        "--min-lines",
+        help="Minimum source lines per function (overrides config).",
+    ),
+    min_nodes: int | None = typer.Option(
+        None,
+        "--min-nodes",
+        help="Minimum normalized AST nodes per function (overrides config).",
+    ),
+    path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--path",
+            help="Path to analyze. Repeat for multiple. Defaults to [tool.forge].paths.",
+        ),
+    ] = None,
+    json_output: str | None = typer.Option(
+        None,
+        "--json",
+        help="Write structured JSON report to this file.",
+    ),
+) -> None:
+    """Analyze structural duplicate function candidates (advisory)."""
+    config = load_config()
+    run_report_command(
+        analyze=lambda: analyze_dry(
+            cli_path_list(path, config.paths),
+            threshold=effective_override(threshold, config.dry_threshold),
+            min_lines=effective_override(min_lines, config.dry_min_lines),
+            min_nodes=effective_override(min_nodes, config.dry_min_nodes),
+        ),
+        print_report=print_dry_report,
         console=console,
         json_output=json_output,
     )

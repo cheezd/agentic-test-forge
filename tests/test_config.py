@@ -24,6 +24,10 @@ gherkin_base_ref = "develop"
 gherkin_test_cmd = "behave --no-capture"
 gherkin_runner = "pytest"
 
+dry_threshold = 0.91
+dry_min_lines = 5
+dry_min_nodes = 25
+
 [tool.forge.gates]
 crap = true
 mutation = true
@@ -46,6 +50,9 @@ dry = true
     assert config.gherkin_base_ref == "develop"
     assert config.gherkin_test_cmd == "behave --no-capture"
     assert config.gherkin_runner == "pytest"
+    assert config.dry_threshold == 0.91
+    assert config.dry_min_lines == 5
+    assert config.dry_min_nodes == 25
     assert config.gates.crap is True
     assert config.gates.mutation is True
     assert config.gates.gherkin is False
@@ -86,6 +93,9 @@ def test_load_config_defaults_when_missing(tmp_path: Path) -> None:
     assert config.gherkin_test_cmd == "behave"
     assert config.gherkin_runner == "behave"
     assert config.gherkin_paths == ["features"]
+    assert config.dry_threshold == 0.82
+    assert config.dry_min_lines == 4
+    assert config.dry_min_nodes == 20
     assert config.gates.crap is False
     assert config.gates.dry is False
 
