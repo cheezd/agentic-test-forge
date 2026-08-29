@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import coverage
+from coverage.parser import PythonParser
 from radon.complexity import cc_visit
 from radon.visitors import Function
 
@@ -81,30 +83,53 @@ def _qualified_name(function: Function) -> str:
     return name
 
 
+@lru_cache(maxsize=1)
+def _exclude_regex() -> str:
+    """Combined regex for excluded lines, per the project's coverage config.
+
+    ``Coverage()`` reads .coveragerc/pyproject.toml from the current
+    directory, so the user's ``exclude_lines`` settings (and the default
+    ``pragma: no cover``) apply here the same way they do in coverage.py's
+    own reports.
+    """
+    exclude_list = coverage.Coverage().config.exclude_list
+    return "|".join(f"(?:{pattern})" for pattern in exclude_list)
+
+
+def _executable_lines(source: str) -> set[int]:
+    """Return executable statement lines using coverage.py's own parser."""
+    parser = PythonParser(text=source, exclude=_exclude_regex())
+    parser.parse_source()
+    return set(parser.statements)
+
+
 def _function_coverage(
     covered_lines: set[int],
+    statement_lines: set[int],
     start_line: int,
     end_line: int,
 ) -> float:
+    """Fraction of executable statements in the line range that were covered.
+
+    The denominator is coverage.py's statement set, so docstrings, blank
+    lines, and comments do not dilute the score.
+    """
     if end_line < start_line:
         return 1.0
-    executable = range(start_line, end_line + 1)
-    total = len(executable)
-    if total == 0:
+    executable = {line for line in statement_lines if start_line <= line <= end_line}
+    if not executable:
         return 1.0
-    covered = sum(1 for line in executable if line in covered_lines)
-    return covered / total
+    covered = len(executable & covered_lines)
+    return covered / len(executable)
 
 
 def _match_coverage_path(data: coverage.CoverageData, filepath: Path) -> str | None:
-    resolved = str(filepath.resolve())
+    resolved = filepath.resolve()
     measured = data.measured_files()
-    if resolved in measured:
-        return resolved
+    if str(resolved) in measured:
+        return str(resolved)
     for measured_path in measured:
-        if Path(measured_path).resolve() == filepath.resolve():
-            return measured_path
-        if Path(measured_path).name == filepath.name:
+        if Path(measured_path).resolve() == resolved:
             return measured_path
     return None
 
@@ -125,12 +150,13 @@ def _finding_from_radon_block(
     block: Function,
     filepath: Path,
     line_set: set[int],
+    statement_lines: set[int],
     *,
     threshold: float,
     formula: CrapFormula,
 ) -> CrapFinding:
     end_line = block.endline or block.lineno
-    fn_coverage = _function_coverage(line_set, block.lineno, end_line)
+    fn_coverage = _function_coverage(line_set, statement_lines, block.lineno, end_line)
     score = compute_crap_score(block.complexity, fn_coverage, formula)
     return CrapFinding(
         qualified_name=_qualified_name(block),
@@ -151,12 +177,14 @@ def _findings_for_file(
 ) -> list[CrapFinding]:
     line_set = _coverage_lines_for_file(data, filepath)
     source = filepath.read_text(encoding="utf-8")
+    statement_lines = _executable_lines(source)
     blocks = _function_blocks_from_source(source)
     return [
         _finding_from_radon_block(
             block,
             filepath,
             line_set,
+            statement_lines,
             threshold=threshold,
             formula=formula,
         )
