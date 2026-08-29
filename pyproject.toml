@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-test-forge"
-version = "1.0.0"
+version = "1.1.0"
 description = "Python quality workflow for agentic AI-driven development (CRAP, mutation, Gherkin gates)"
 readme = "README.md"
 requires-python = ">=3.11"

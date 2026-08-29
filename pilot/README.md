@@ -57,7 +57,7 @@ Dogfood mutation gates run on `ubuntu-latest` via `.github/workflows/ci.yml`:
 | `forge-mutate-pilot` | `pytest --cov=src/pilot_app tests/` then `forge mutate --path src/pilot_app --full` |
 | `forge-mutate-gherkin-pilot` | `python -m behave features/` then `forge mutate-gherkin --path features --full` |
 
-Install uses editable forge + pilot (`pip install -e ".[dev]"` and `pip install -e "./pilot[dev]"`) until the mutmut fixes ship in PyPI `1.1.0`.
+Install uses editable forge + pilot (`pip install -e ".[dev]"` and `pip install -e "./pilot[dev]"`). After the `v1.1.0` tag, consumers can instead `pip install agentic-test-forge==1.1.0`.
 
 Local Linux smoke:
 
@@ -70,21 +70,23 @@ python -m behave features/
 forge mutate-gherkin --path features --full --threshold 80
 ```
 
+Consumer write-up of this layout: [Gherkin appendix](../docs/consumer-ci.md#gherkin-appendix) and [Windows / WSL mutation](../docs/consumer-ci.md#windows-and-wsl-mutation).
+
 ## Manual commands
 
 From `pilot/` on **Windows** (gherkin):
 
 ```powershell
 $env:PYTHONPATH = "src"
-behave features/
+python -m behave features/
 forge mutate-gherkin --path features --full --threshold 80
 ```
 
-From `pilot/` in **WSL** (mutmut):
+From the WSL native copy (mutmut). The setup script installs `~/forge-venv` and rsyncs to `~/agentic-test-forge` — do not run mutmut from `/mnt/c`:
 
 ```bash
-source ../.venv-wsl/bin/activate
-pip install -e "..[dev]" -e ".[dev]"
+source ~/forge-venv/bin/activate
+cd ~/agentic-test-forge/pilot
 pytest --cov=src/pilot_app tests/
 forge mutate --path src/pilot_app --full --threshold 80
 ```
