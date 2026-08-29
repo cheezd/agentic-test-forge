@@ -43,17 +43,19 @@ pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-for
 
 ```bash
 forge --help
-forge crap --path src/ --threshold 30
-forge mutate --path src/ --base main --threshold 80
-forge mutate-gherkin --path features/ --base main --threshold 80
-forge check --path src/ --features-path features/
+forge crap --threshold 30
+forge mutate --base main --threshold 80
+forge mutate-gherkin --base main --threshold 80
+forge check
 ```
+
+Omitted `--path` / `--features-path` uses `[tool.forge].paths` and `gherkin_paths`. Repeat `--path` to override with multiple roots (`forge check --path dashboards --path ghdash`).
 
 Run tests with coverage, then the full quality gate:
 
 ```bash
 pytest --cov=src
-forge check --path src/ --json report.json
+forge check --json report.json
 ```
 
 Differential mutation uses git diff against `--base` (default `main`) and skips unchanged files tracked in `.forge/mutation-manifest.json`. Use `--full` to ignore the manifest.

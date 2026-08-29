@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 from rich.console import Console
 
 from agentic_test_forge.analysis.crap import analyze_crap
-from agentic_test_forge.cli.helpers import effective_override, run_check_command, run_report_command
+from agentic_test_forge.cli.helpers import (
+    cli_path_list,
+    effective_override,
+    optional_cli_paths,
+    run_check_command,
+    run_report_command,
+)
 from agentic_test_forge.config import load_config
 from agentic_test_forge.mutation.code import analyze_mutation
 from agentic_test_forge.mutation.gherkin import analyze_gherkin_mutation
@@ -32,7 +40,13 @@ def crap(
         "--threshold",
         help="CRAP score threshold (overrides config).",
     ),
-    path: str = typer.Option("src/", "--path", help="Path to analyze."),
+    path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--path",
+            help="Path to analyze. Repeat for multiple. Defaults to [tool.forge].paths.",
+        ),
+    ] = None,
     json_output: str | None = typer.Option(
         None,
         "--json",
@@ -48,7 +62,7 @@ def crap(
     config = load_config()
     run_report_command(
         analyze=lambda: analyze_crap(
-            [path],
+            cli_path_list(path, config.paths),
             threshold=effective_override(threshold, config.crap_threshold),
             formula=config.crap_formula,
             coverage_file=coverage_file,
@@ -66,7 +80,13 @@ def mutate(
         "--threshold",
         help="Mutation score threshold percentage (overrides config).",
     ),
-    path: str = typer.Option("src/", "--path", help="Path roots to analyze."),
+    path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--path",
+            help="Path roots to analyze. Repeat for multiple. Defaults to [tool.forge].paths.",
+        ),
+    ] = None,
     base: str | None = typer.Option(
         None,
         "--base",
@@ -87,7 +107,7 @@ def mutate(
     config = load_config()
     run_report_command(
         analyze=lambda: analyze_mutation(
-            [path],
+            cli_path_list(path, config.paths),
             threshold=effective_override(threshold, config.mutation_threshold),
             base_ref=effective_override(base, config.mutation_base_ref),
             manifest_dir=config.manifest_dir,
@@ -102,12 +122,20 @@ def mutate(
 
 @app.command("check")
 def check(
-    path: str = typer.Option("src/", "--path", help="Path roots for CRAP and code mutation."),
-    features_path: str = typer.Option(
-        "features/",
-        "--features-path",
-        help="Path to .feature files for Gherkin mutation gate.",
-    ),
+    path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--path",
+            help="Path roots for CRAP and mutation. Repeat for multiple. Defaults to config paths.",
+        ),
+    ] = None,
+    features_path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--features-path",
+            help="Feature paths. Repeat for multiple. Defaults to [tool.forge].gherkin_paths.",
+        ),
+    ] = None,
     coverage_file: str = typer.Option(
         ".coverage",
         "--coverage-file",
@@ -134,8 +162,8 @@ def check(
     run_check_command(
         analyze=lambda: run_quality_check(
             config,
-            paths=[path],
-            gherkin_paths=[features_path],
+            paths=optional_cli_paths(path),
+            gherkin_paths=optional_cli_paths(features_path),
             coverage_file=coverage_file,
             base_ref=base,
             full_run=full,
@@ -147,7 +175,13 @@ def check(
 
 @app.command("mutate-gherkin")
 def mutate_gherkin(
-    path: str = typer.Option("features/", "--path", help="Path to .feature files."),
+    path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--path",
+            help="Feature paths. Repeat for multiple. Defaults to [tool.forge].gherkin_paths.",
+        ),
+    ] = None,
     threshold: float | None = typer.Option(
         None,
         "--threshold",
@@ -173,7 +207,7 @@ def mutate_gherkin(
     config = load_config()
     run_report_command(
         analyze=lambda: analyze_gherkin_mutation(
-            [path],
+            cli_path_list(path, config.gherkin_paths),
             threshold=effective_override(threshold, config.gherkin_threshold),
             base_ref=effective_override(base, config.gherkin_base_ref),
             manifest_dir=config.manifest_dir,

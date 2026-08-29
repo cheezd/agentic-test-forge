@@ -19,6 +19,7 @@ from agentic_test_forge.analysis.crap import (
     _exclude_regex,
     _executable_lines,
     _finding_from_radon_block,
+    _match_coverage_path,
     analyze_crap,
     compute_crap_score,
 )
@@ -90,6 +91,43 @@ def test_coverage_lines_for_file_ignores_same_named_sibling(tmp_path: Path) -> N
 
     assert _coverage_lines_for_file(cov.get_data(), measured) == {1}
     assert _coverage_lines_for_file(cov.get_data(), unmeasured) == set()
+
+
+def test_match_coverage_path_uses_relative_keys(tmp_path: Path) -> None:
+    dashboards = tmp_path / "dashboards" / "models.py"
+    rules = tmp_path / "compliance_rules" / "models.py"
+    for module in (dashboards, rules):
+        module.parent.mkdir()
+        module.write_text("def foo():\n    return 1\n", encoding="utf-8")
+
+    data = coverage.CoverageData(no_disk=True)
+    data.add_lines(
+        {
+            "dashboards/models.py": {1},
+            "compliance_rules/models.py": {1, 2},
+        }
+    )
+
+    assert _match_coverage_path(data, dashboards, search_root=tmp_path) == "dashboards/models.py"
+    assert _coverage_lines_for_file(data, dashboards, search_root=tmp_path) == {1}
+    assert _coverage_lines_for_file(data, rules, search_root=tmp_path) == {1, 2}
+
+
+def test_match_coverage_path_does_not_guess_duplicate_basenames(tmp_path: Path) -> None:
+    dashboards = tmp_path / "dashboards" / "models.py"
+    dashboards.parent.mkdir()
+    dashboards.write_text("def foo():\n    return 1\n", encoding="utf-8")
+
+    data = coverage.CoverageData(no_disk=True)
+    data.add_lines(
+        {
+            "other_app/models.py": {1, 2, 3},
+            "third_app/models.py": {4},
+        }
+    )
+
+    assert _match_coverage_path(data, dashboards, search_root=tmp_path) is None
+    assert _coverage_lines_for_file(data, dashboards, search_root=tmp_path) == set()
 
 
 def test_finding_from_radon_block_uses_coverage_and_threshold() -> None:

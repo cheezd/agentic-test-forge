@@ -95,7 +95,7 @@ jobs:
         run: pytest --cov=src --cov-report=xml
 
       - name: Run forge quality gate
-        run: forge check --path src/ --json forge-report.json
+        run: forge check --json forge-report.json
 
       - name: Upload forge report
         if: always()
@@ -128,7 +128,7 @@ Validated on the external pilot [compliance-llm-analysis-platform](https://githu
 | Application paths | `paths = ["analysis"]` (relative to CWD, not pyproject directory) |
 | Settings / wiring | Outside `paths` (e.g. `django_project/`) |
 
-`load_config()` walks up from the current working directory to find repo-root `pyproject.toml`. `paths` entries resolve relative to **CWD** — invoke `forge` from the directory that contains your Django app tree.
+`load_config()` walks up from the current working directory to find repo-root `pyproject.toml`. `paths` entries resolve relative to **CWD** — invoke `forge` from the directory that contains your Django app tree. `forge check` with no `--path` uses those config paths. Repeat `--path` to override (`forge check --path dashboards --path ghdash`).
 
 ### Repo-root `[tool.forge]` (pilot)
 
@@ -158,14 +158,25 @@ Django tests with `coverage.py` (not pytest-cov required for the pilot path):
 cd apps/backend
 pip install agentic-test-forge==1.0.0 coverage
 coverage run --source=analysis manage.py test tests --verbosity=0
-forge check --path analysis --coverage-file .coverage
+forge check --coverage-file .coverage
 ```
 
-Use the same `--source=` scope as `[tool.forge].paths` so CRAP scores align with collected coverage.
+Use the same `source` scope as `[tool.forge].paths` so CRAP scores align with collected coverage. For multi-package Django trees (repeated `models.py` / `views.py` names), set:
+
+```toml
+[tool.coverage.run]
+source = ["dashboards", "ghdash", "health_policy", "compliance_rules"]
+relative_files = true
+
+[tool.forge]
+paths = ["dashboards", "ghdash", "health_policy", "compliance_rules"]
+```
+
+CRAP matches coverage by resolved path or project-relative POSIX key. It does **not** join on basename, so two `models.py` files cannot share each other's coverage.
 
 ### Mutation note
 
-`mutation_test_cmd` records consumer intent; mutmut still expects pytest-oriented setup for Django projects. Keep `mutation = false` through CRAP/DRY rollout; enable mutation on **Linux CI** after a pytest-django / `[tool.mutmut]` spike ([#73](https://github.com/cheezd/agentic-test-forge/issues/73)).
+`mutation_test_cmd` records consumer intent; mutmut still expects pytest-oriented setup for Django projects. Keep `mutation = false` through CRAP/DRY rollout. pytest-django + mutmut is still a greenfield spike ([#147](https://github.com/cheezd/agentic-test-forge/issues/147)); do not block a release on it.
 
 ## Pre-commit hook
 
@@ -180,7 +191,7 @@ repos:
     rev: v1.0.0
     hooks:
       - id: forge-check
-        # Optional overrides (defaults match forge check):
+        # Optional overrides (omit --path to use [tool.forge].paths):
         # args: [--path, src/, --coverage-file, .coverage]
 ```
 
