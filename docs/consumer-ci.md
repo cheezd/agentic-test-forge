@@ -139,7 +139,7 @@ paths = ["analysis"]
 crap_threshold = 50
 mutation_threshold = 80
 mutation_base_ref = "main"
-mutation_test_cmd = "python manage.py test tests"  # documents intent; see mutation note below
+mutation_test_cmd = "pytest --nomigrations --reuse-db"  # audit only; see mutation note
 manifest_dir = ".forge"
 
 [tool.forge.gates]
@@ -175,9 +175,53 @@ paths = ["dashboards", "ghdash", "health_policy", "compliance_rules"]
 
 CRAP matches coverage by resolved path or project-relative POSIX key. It does **not** join on basename, so two `models.py` files cannot share each other's coverage.
 
-### Mutation note
+### Mutation (pytest-django)
 
-`mutation_test_cmd` records consumer intent; mutmut still expects pytest-oriented setup for Django projects. Keep `mutation = false` through CRAP/DRY rollout. pytest-django + mutmut is still a greenfield spike ([#147](https://github.com/cheezd/agentic-test-forge/issues/147)); do not block a release on it.
+Verified 2026-08-29 on Linux with `agentic-test-forge==1.1.0`, Django 5.2, mutmut 3.7, and pytest-django 4.14 ([#147](https://github.com/cheezd/agentic-test-forge/issues/147)). **Works with caveats** — enable the gate on Linux CI or WSL, not native Windows.
+
+`mutation_test_cmd` is **audit only**. Forge writes it to `.forge/mutmut-run.toml`; the subprocess is still mutmut's pytest runner. `python manage.py test` is not a mutmut input. Use pytest-django.
+
+Keep `mutation = false` for Windows pre-commit and for the first CRAP/DRY rollout. When Linux CI is ready, add:
+
+```toml
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"  # your settings module
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "--nomigrations"
+
+[tool.mutmut]
+source_paths = ["billing/"]  # same packages as [tool.forge].paths
+pytest_add_cli_args_test_selection = ["tests/"]
+pytest_add_cli_args = ["--nomigrations", "--reuse-db"]
+also_copy = ["config/", "manage.py", "conftest.py"]
+
+[tool.forge]
+paths = ["billing"]
+mutation_threshold = 80
+mutation_base_ref = "main"
+mutation_test_cmd = "pytest --nomigrations --reuse-db"
+
+[tool.forge.gates]
+mutation = true  # ubuntu-latest or WSL only
+```
+
+Install on the Linux runner:
+
+```bash
+pip install agentic-test-forge==1.1.0 pytest pytest-django django
+pytest -q
+forge mutate --full --threshold 80
+# or, with the gate enabled:
+forge check
+```
+
+Caveats:
+
+- mutmut needs Unix `fork()`. Native Windows exits **2**. Prefer `ubuntu-latest`; local Windows developers use WSL on the Linux filesystem (not `/mnt/c`). See [Windows and WSL mutation](#windows-and-wsl-mutation).
+- Start with a **narrow slice** (one app package), not the full suite.
+- A kill rate below `mutation_threshold` is a **gate failure** (`exit 1`), not a tool error. Survivors mean the pytest-django tests did not catch those mutants.
+- `also_copy` must include settings, `manage.py`, and `conftest.py` so mutmut's worktree can load Django.
 
 ## Gherkin appendix
 
