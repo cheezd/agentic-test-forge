@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- Consumer docs: pytest-django + mutmut recipe (works with caveats on Linux/WSL; `mutation_test_cmd` remains audit-only) ([#147](https://github.com/cheezd/agentic-test-forge/issues/147))
+
 ## [1.1.0] - 2026-08-29
 
 PyPI release of work already on `main` since `v1.0.0`. Consumers can pin `==1.1.0` instead of a git ref.
