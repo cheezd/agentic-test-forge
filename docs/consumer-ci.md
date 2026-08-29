@@ -14,13 +14,13 @@ Install `agentic-test-forge` into a Python consumer repository and run `forge ch
 From PyPI:
 
 ```bash
-pip install agentic-test-forge==1.0.0
+pip install agentic-test-forge==1.1.0
 ```
 
 From Git (fallback):
 
 ```bash
-pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git@v1.0.0"
+pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git@v1.1.0"
 ```
 
 ## Version pinning
@@ -29,9 +29,9 @@ Pin an exact semver in CI and pre-commit so gate behavior stays reproducible acr
 
 | Surface | Pin | Bump when |
 |---------|-----|-----------|
-| GitHub Actions / CI | `pip install agentic-test-forge==1.0.0` | A new forge release changes thresholds, exit codes, or gate semantics you rely on |
-| Pre-commit | `rev: v1.0.0` on the hook repo + `pip install agentic-test-forge==1.0.0` in docs/setup | Same as CI — align hook `rev` with the PyPI version you install |
-| Local dev | `pip install agentic-test-forge==1.0.0` or editable producer install | Optional: float latest patch (`==1.0.*`) only if you accept drift |
+| GitHub Actions / CI | `pip install agentic-test-forge==1.1.0` | A new forge release changes thresholds, exit codes, or gate semantics you rely on |
+| Pre-commit | `rev: v1.1.0` on the hook repo + `pip install agentic-test-forge==1.1.0` in docs/setup | Same as CI — align hook `rev` with the PyPI version you install |
+| Local dev | `pip install agentic-test-forge==1.1.0` or editable producer install | Optional: float latest patch (`==1.1.*`) only if you accept drift |
 
 **When to bump:** After a tagged forge release (`v1.0.1`, `v1.1.0`, …), update pins in the consumer repo in the same PR (or a follow-up) once you have validated the new version against your thresholds. Patch releases are usually drop-in; minor/major releases may need threshold or gate config review.
 
@@ -55,7 +55,7 @@ mutation_threshold = 80
 mutation_base_ref = "main"
 mutation_test_cmd = "pytest"
 gherkin_paths = ["features"]
-gherkin_test_cmd = "behave"
+gherkin_test_cmd = "python -m behave"  # not bare `behave` — often missing from PATH
 
 [tool.forge.gates]
 crap = true
@@ -89,7 +89,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e ".[dev]"
-          pip install agentic-test-forge==1.0.0
+          pip install agentic-test-forge==1.1.0
 
       - name: Run tests with coverage
         run: pytest --cov=src --cov-report=xml
@@ -111,7 +111,8 @@ For legacy repositories, enable gates incrementally:
 
 1. **Week 1:** `crap = true` only — fix high-CRAP hotspots
 2. **Week 2:** add `dry = true` — refactor obvious duplication
-3. **Week 3+:** enable `mutation` on Linux CI; then `gherkin` when BDD tests exist
+3. **Week 3:** enable `mutation` on Linux CI or WSL (keep `false` on Windows pre-commit)
+4. **Week 4+:** enable `gherkin` once `python -m behave` (or pytest-bdd) is already green
 
 Use advisory thresholds initially (`crap_threshold = 50`) and ratchet down over time. See [score interpretation](domain/CONTEXT.md#score-interpretation) for what CRAP and mutation values mean.
 
@@ -156,7 +157,7 @@ Django tests with `coverage.py` (not pytest-cov required for the pilot path):
 
 ```bash
 cd apps/backend
-pip install agentic-test-forge==1.0.0 coverage
+pip install agentic-test-forge==1.1.0 coverage
 coverage run --source=analysis manage.py test tests --verbosity=0
 forge check --coverage-file .coverage
 ```
@@ -178,6 +179,67 @@ CRAP matches coverage by resolved path or project-relative POSIX key. It does **
 
 `mutation_test_cmd` records consumer intent; mutmut still expects pytest-oriented setup for Django projects. Keep `mutation = false` through CRAP/DRY rollout. pytest-django + mutmut is still a greenfield spike ([#147](https://github.com/cheezd/agentic-test-forge/issues/147)); do not block a release on it.
 
+## Gherkin appendix
+
+Enable the Gherkin gate only after acceptance tests already pass. The in-repo example is [`pilot/`](../pilot/README.md) (behave + Examples-table mutation).
+
+### Config
+
+```toml
+[tool.forge]
+gherkin_paths = ["features"]
+gherkin_threshold = 80
+gherkin_base_ref = "main"
+gherkin_test_cmd = "python -m behave"
+gherkin_runner = "behave"  # behave | pytest
+
+[tool.forge.gates]
+gherkin = true
+```
+
+Use `python -m behave`, not bare `behave`. The default `[tool.forge]` value is still `behave`; that fails with `Acceptance test command not found` when the script is not on `PATH` (common on Windows venvs and some CI images). `python -m behave` uses the same interpreter as `forge`.
+
+Omitted `--features-path` / `--path` on `forge mutate-gherkin` uses `gherkin_paths`. Repeat `--path` to override.
+
+### Commands
+
+Smoke the suite, then mutate. Dogfood CI does the same from `pilot/`:
+
+```bash
+python -m behave features/
+forge mutate-gherkin --full --threshold 80
+# or, with the gate enabled:
+forge check
+```
+
+Gherkin mutation edits Examples table cells in changed `.feature` files, runs `gherkin_test_cmd` per mutant, and records results in `.forge/gherkin-manifest.json`. It does **not** need mutmut and **does** run on native Windows.
+
+For pytest-bdd, set `gherkin_runner = "pytest"` and point `gherkin_test_cmd` at your pytest invocation.
+
+## Windows and WSL mutation
+
+Verified on the in-repo pilot (2026-05-28): Gherkin 100% (17/17) on native Windows; code mutation 100% (2/2) in WSL Ubuntu 24.04.
+
+| Gate | Where to run | Why |
+|------|--------------|-----|
+| Code mutation (`forge mutate`) | **WSL Ubuntu** or `ubuntu-latest` | mutmut needs Unix `fork()` and is unreliable on `/mnt/c` |
+| Gherkin mutation (`forge mutate-gherkin`) | **Native Windows** or WSL | subprocess + behave; no mutmut |
+
+Keep `mutation = false` in Windows pre-commit. If the mutation gate is enabled on native Windows, `forge check` exits **2** with a clear error — it does not crash.
+
+### WSL layout (do not run mutmut on `/mnt/c`)
+
+`scripts/sync-wsl-pilot.ps1` rsyncs the repo to `~/agentic-test-forge` inside Ubuntu-24.04 so mutmut runs on the Linux filesystem. From the producer repo root in PowerShell:
+
+```powershell
+.\scripts\setup-wsl-pilot.ps1   # one-time: distro, venv, editable install
+.\scripts\sync-wsl-pilot.ps1    # after Windows edits, before mutmut
+.\scripts\pilot-gherkin.ps1     # native Windows Gherkin
+.\scripts\pilot-mutmut-wsl.ps1  # WSL code mutation
+```
+
+Consumer repos can copy that pattern: sync off `/mnt/c`, install forge in a Linux venv, run `forge mutate` there. GitHub Actions should use `ubuntu-latest` for the mutation job (see [GitHub Actions example](#github-actions-example)); local Windows developers use WSL or skip the gate.
+
 ## Pre-commit hook
 
 Optional local gate before commit. The hook runs `forge check` and reads the same
@@ -188,7 +250,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/cheezd/agentic-test-forge
-    rev: v1.0.0
+    rev: v1.1.0
     hooks:
       - id: forge-check
         # Optional overrides (omit --path to use [tool.forge].paths):
@@ -198,7 +260,7 @@ repos:
 Install hooks:
 
 ```bash
-pip install pre-commit agentic-test-forge==1.0.0
+pip install pre-commit agentic-test-forge==1.1.0
 pre-commit install
 ```
 
@@ -234,9 +296,9 @@ Or chain a local hook before `forge-check`:
 
 ### Windows and mutation
 
-Keep `mutation = false` in `[tool.forge.gates]` for local pre-commit on Windows
-(mutmut does not run natively). Use Linux CI for mutation gates. If mutation is
-enabled on Windows, `forge check` exits **2** with a clear error — it does not crash.
+Keep `mutation = false` in `[tool.forge.gates]` for local pre-commit on Windows.
+See [Windows and WSL mutation](#windows-and-wsl-mutation). If mutation is enabled
+on Windows, `forge check` exits **2** with a clear error — it does not crash.
 
 Exit codes match [CI exit codes](#exit-codes) (0 pass, 1 gate failure, 2 tool error).
 
@@ -272,6 +334,7 @@ DRY findings are **advisory** — they appear in the combined report but do not 
 | Problem | Fix |
 |---------|-----|
 | `Coverage data not found` | Run `pytest --cov=...` before `forge check` or the pre-commit hook |
-| `mutmut does not support native Windows` | Use `ubuntu-latest` runners for mutation |
+| `mutmut does not support native Windows` | Use `ubuntu-latest` or WSL; see [Windows and WSL mutation](#windows-and-wsl-mutation) |
+| `Acceptance test command not found: behave` | Set `gherkin_test_cmd = "python -m behave"` |
 | `git diff failed` | Ensure `fetch-depth: 0` in checkout |
 | Gate blocks every PR on legacy code | Raise thresholds temporarily; enable one gate at a time |

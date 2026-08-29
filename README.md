@@ -6,7 +6,7 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**v1.1 complete** — PyPI, dogfood CI, external pilot, pre-commit hook, and docs polish shipped ([#58](https://github.com/cheezd/agentic-test-forge/issues/58)).
+**Latest PyPI: 1.1.0** — mutmut 3.5 runner, CLI config paths, CRAP relative coverage keys ([#135](https://github.com/cheezd/agentic-test-forge/issues/135)). v1.1 product work ([#58](https://github.com/cheezd/agentic-test-forge/issues/58)) shipped earlier; this tag is the pin consumers should use.
 
 | Command | Status |
 |---------|--------|
@@ -24,7 +24,7 @@ pip install agentic-test-forge
 Pin a version:
 
 ```bash
-pip install agentic-test-forge==1.0.0
+pip install agentic-test-forge==1.1.0
 ```
 
 For local development of this repo:
@@ -77,7 +77,7 @@ mutation_base_ref = "main"
 mutation_test_cmd = "pytest"
 gherkin_threshold = 80
 gherkin_base_ref = "main"
-gherkin_test_cmd = "behave"
+gherkin_test_cmd = "python -m behave"  # not bare `behave` — often missing from PATH
 gherkin_runner = "behave"  # behave | pytest
 gherkin_paths = ["features"]
 
@@ -95,7 +95,9 @@ experiments, e.g. stricter thresholds on your machine). Unlike `pyproject.toml`,
 not search parent directories for `forge.toml`; run from the directory that contains it, or
 rely on `pyproject.toml` only.
 
-Consumer CI integration: see [`docs/consumer-ci.md`](docs/consumer-ci.md) (GitHub Actions, [version pinning](docs/consumer-ci.md#version-pinning), [Django / monorepo](docs/consumer-ci.md#django-and-monorepo-appendix), [Windows console notes](docs/consumer-ci.md#windows-console-and-rich-output)).
+**Staged rollout** for legacy repos: enable `crap` first, then advisory `dry`, then `mutation` on Linux CI or WSL (keep it off in Windows pre-commit), then `gherkin` once `python -m behave` (or pytest-bdd) is already green. See [consumer-ci staged rollout](docs/consumer-ci.md#staged-rollout).
+
+Consumer CI integration: see [`docs/consumer-ci.md`](docs/consumer-ci.md) (GitHub Actions, [version pinning](docs/consumer-ci.md#version-pinning), [Django / monorepo](docs/consumer-ci.md#django-and-monorepo-appendix), [Gherkin](docs/consumer-ci.md#gherkin-appendix), [Windows / WSL mutation](docs/consumer-ci.md#windows-and-wsl-mutation), [Windows console notes](docs/consumer-ci.md#windows-console-and-rich-output)).
 
 ### Pre-commit (optional)
 
@@ -105,13 +107,13 @@ Run `forge check` locally before commit (respects `[tool.forge.gates]`):
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/cheezd/agentic-test-forge
-    rev: v1.0.0
+    rev: v1.1.0
     hooks:
       - id: forge-check
 ```
 
 ```bash
-pip install pre-commit agentic-test-forge==1.0.0
+pip install pre-commit agentic-test-forge==1.1.0
 pre-commit install
 pytest --cov=src   # CRAP gate needs .coverage
 pre-commit run forge-check --all-files
