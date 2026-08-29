@@ -123,19 +123,73 @@ def _function_coverage(
     return covered / len(executable)
 
 
-def _match_coverage_path(data: coverage.CoverageData, filepath: Path) -> str | None:
+def _coverage_path_key(raw: str | Path, search_root: Path) -> str:
+    """Normalize a coverage or source path to a project-relative POSIX key."""
+    path = Path(raw)
+    root = search_root.resolve()
+    if path.is_absolute():
+        try:
+            return path.resolve().relative_to(root).as_posix()
+        except ValueError:
+            return path.resolve().as_posix()
+    return path.as_posix()
+
+
+def _match_coverage_path(
+    data: coverage.CoverageData,
+    filepath: Path,
+    *,
+    search_root: Path | None = None,
+) -> str | None:
+    """Return the measured coverage key for ``filepath``, or ``None``.
+
+    Matches resolved absolute paths first, then project-relative POSIX keys
+    (``relative_files = true``). Does not fall back to basename — duplicate
+    Django names such as ``models.py`` must not share coverage.
+    """
+    root = resolve_search_root(search_root)
     resolved = filepath.resolve()
-    measured = data.measured_files()
+    measured = list(data.measured_files())
     if str(resolved) in measured:
         return str(resolved)
+
+    target_key = _coverage_path_key(resolved, root)
+    resolved_hits: list[str] = []
+    key_hits: list[str] = []
+
     for measured_path in measured:
-        if Path(measured_path).resolve() == resolved:
-            return measured_path
+        measured_as_path = Path(measured_path)
+        if measured_as_path.is_absolute():
+            try:
+                if measured_as_path.resolve() == resolved:
+                    resolved_hits.append(measured_path)
+                    continue
+            except OSError:
+                pass
+        else:
+            candidate = (root / measured_as_path).resolve()
+            if candidate == resolved:
+                resolved_hits.append(measured_path)
+                continue
+        if _coverage_path_key(measured_path, root) == target_key:
+            key_hits.append(measured_path)
+
+    if len(resolved_hits) == 1:
+        return resolved_hits[0]
+    if len(resolved_hits) > 1:
+        return None
+    if len(key_hits) == 1:
+        return key_hits[0]
     return None
 
 
-def _coverage_lines_for_file(data: coverage.CoverageData, filepath: Path) -> set[int]:
-    covered_key = _match_coverage_path(data, filepath)
+def _coverage_lines_for_file(
+    data: coverage.CoverageData,
+    filepath: Path,
+    *,
+    search_root: Path | None = None,
+) -> set[int]:
+    covered_key = _match_coverage_path(data, filepath, search_root=search_root)
     if covered_key is None:
         return set()
     raw_lines = data.lines(covered_key) or []
@@ -174,8 +228,9 @@ def _findings_for_file(
     *,
     threshold: float,
     formula: CrapFormula,
+    search_root: Path | None = None,
 ) -> list[CrapFinding]:
-    line_set = _coverage_lines_for_file(data, filepath)
+    line_set = _coverage_lines_for_file(data, filepath, search_root=search_root)
     source = filepath.read_text(encoding="utf-8")
     statement_lines = _executable_lines(source)
     blocks = _function_blocks_from_source(source)
@@ -198,6 +253,7 @@ def _collect_crap_findings(
     *,
     threshold: float,
     formula: CrapFormula,
+    search_root: Path | None = None,
 ) -> list[CrapFinding]:
     findings: list[CrapFinding] = []
     for filepath in python_files:
@@ -207,6 +263,7 @@ def _collect_crap_findings(
                 data,
                 threshold=threshold,
                 formula=formula,
+                search_root=search_root,
             ),
         )
     findings.sort(key=lambda item: item.crap_score, reverse=True)
@@ -258,5 +315,6 @@ def analyze_crap(
         cov.get_data(),
         threshold=threshold,
         formula=formula,
+        search_root=root,
     )
     return _build_crap_report(findings, threshold=threshold, formula=formula)

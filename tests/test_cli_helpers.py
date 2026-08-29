@@ -11,13 +11,32 @@ from rich.console import Console
 
 from agentic_test_forge.analysis.crap import CrapReport
 from agentic_test_forge.cli.exit_codes import ForgeExitCode
-from agentic_test_forge.cli.helpers import effective_override, run_report_command, write_json_report
+from agentic_test_forge.cli.helpers import (
+    cli_path_list,
+    effective_override,
+    optional_cli_paths,
+    run_report_command,
+    write_json_report,
+)
 from agentic_test_forge.reporting.status import ReportStatus
 
 
 def test_effective_override_prefers_cli_value() -> None:
     assert effective_override(5.0, 30.0) == 5.0
     assert effective_override(None, 30.0) == 30.0
+
+
+def test_cli_path_list_uses_config_when_omitted() -> None:
+    assert cli_path_list(None, ["dashboards", "ghdash"]) == ["dashboards", "ghdash"]
+    assert cli_path_list([], ["src"]) == ["src"]
+    assert cli_path_list(["pkg"], ["src"]) == ["pkg"]
+    assert cli_path_list(["a", "b"], ["src"]) == ["a", "b"]
+
+
+def test_optional_cli_paths_none_means_use_config() -> None:
+    assert optional_cli_paths(None) is None
+    assert optional_cli_paths([]) is None
+    assert optional_cli_paths(["dashboards", "ghdash"]) == ["dashboards", "ghdash"]
 
 
 def test_write_json_report_writes_file(tmp_path: Path) -> None:

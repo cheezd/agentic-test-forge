@@ -127,6 +127,67 @@ def test_check_exits_with_error_on_tool_failure() -> None:
     assert "mutmut unavailable" in result.output
 
 
+def test_check_omitted_path_uses_config_paths() -> None:
+    report = CheckReport(
+        tool="check",
+        status="pass",
+        summary="All clear.",
+        gates_run=(),
+    )
+    config = ForgeConfig(
+        paths=["dashboards", "ghdash"],
+        gherkin_paths=["features"],
+        gates=GateConfig(crap=True, mutation=False, gherkin=False),
+    )
+    with (
+        patch("agentic_test_forge.cli.main.load_config", return_value=config),
+        patch("agentic_test_forge.cli.main.run_quality_check", return_value=report) as check,
+    ):
+        result = runner.invoke(app, ["check"])
+    assert result.exit_code == ForgeExitCode.SUCCESS
+    assert check.call_args.kwargs["paths"] is None
+    assert check.call_args.kwargs["gherkin_paths"] is None
+
+
+def test_check_repeated_path_overrides_config() -> None:
+    report = CheckReport(
+        tool="check",
+        status="pass",
+        summary="All clear.",
+        gates_run=(),
+    )
+    config = ForgeConfig(paths=["src"], gates=GateConfig(crap=True, mutation=False, gherkin=False))
+    with (
+        patch("agentic_test_forge.cli.main.load_config", return_value=config),
+        patch("agentic_test_forge.cli.main.run_quality_check", return_value=report) as check,
+    ):
+        result = runner.invoke(
+            app,
+            ["check", "--path", "dashboards", "--path", "ghdash"],
+        )
+    assert result.exit_code == ForgeExitCode.SUCCESS
+    assert check.call_args.kwargs["paths"] == ["dashboards", "ghdash"]
+
+
+def test_crap_omitted_path_uses_config_paths() -> None:
+    report = CrapReport(
+        tool="crap",
+        status="pass",
+        threshold=30,
+        formula="standard",
+        findings=(),
+        summary="All clear.",
+    )
+    config = ForgeConfig(paths=["dashboards", "compliance_rules"])
+    with (
+        patch("agentic_test_forge.cli.main.load_config", return_value=config),
+        patch("agentic_test_forge.cli.main.analyze_crap", return_value=report) as analyze,
+    ):
+        result = runner.invoke(app, ["crap"])
+    assert result.exit_code == ForgeExitCode.SUCCESS
+    assert analyze.call_args.args[0] == ["dashboards", "compliance_rules"]
+
+
 def test_check_json_output(tmp_path: Path) -> None:
     report = CheckReport(
         tool="check",

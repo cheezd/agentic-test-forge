@@ -41,6 +41,23 @@ def effective_override(cli_value: OverrideT | None, config_value: OverrideT) -> 
     return config_value if cli_value is None else cli_value
 
 
+def cli_path_list(
+    cli_paths: list[str] | None,
+    config_paths: list[str],
+) -> list[str | Path]:
+    """Return repeated ``--path`` values when provided, otherwise config paths."""
+    chosen: list[str | Path] = list(cli_paths if cli_paths else config_paths)
+    return chosen
+
+
+def optional_cli_paths(cli_paths: list[str] | None) -> list[str | Path] | None:
+    """Return CLI paths for ``run_quality_check``, or ``None`` to use config."""
+    if not cli_paths:
+        return None
+    paths: list[str | Path] = list(cli_paths)
+    return paths
+
+
 def write_json_report(report: JsonReport, path: str, console: Console) -> None:
     """Write a structured JSON report and notify on the console."""
     Path(path).write_text(report.to_json(), encoding="utf-8")
