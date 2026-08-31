@@ -13,6 +13,7 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 | `forge crap` | Available |
 | `forge mutate` | Available (Linux/WSL; mutmut does not run natively on Windows) |
 | `forge mutate-gherkin` | Available |
+| `forge dry` | Available (advisory semantic DRY) |
 | `forge check` | Available (includes optional advisory DRY scan) |
 
 ## Install
@@ -44,6 +45,7 @@ pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-for
 ```bash
 forge --help
 forge crap --threshold 30
+forge dry
 forge mutate --base main --threshold 80
 forge mutate-gherkin --base main --threshold 80
 forge check

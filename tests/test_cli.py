@@ -6,6 +6,7 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from agentic_test_forge.analysis.crap import CoverageDataMissingError, CrapFinding, CrapReport
+from agentic_test_forge.analysis.dry import DryFinding, DryReport
 from agentic_test_forge.cli.exit_codes import ForgeExitCode
 from agentic_test_forge.cli.main import app
 from agentic_test_forge.config.models import ForgeConfig, GateConfig
@@ -28,9 +29,90 @@ def test_help_lists_subcommands() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == ForgeExitCode.SUCCESS
     assert "crap" in result.stdout
+    assert "dry" in result.stdout
     assert "mutate" in result.stdout
     assert "check" in result.stdout
     assert "mutate-gherkin" in result.stdout
+
+
+def _write_clone_pair(tmp_path: Path) -> Path:
+    package = tmp_path / "src"
+    package.mkdir()
+    (package / "a.py").write_text("def duplicate(value):\n    return value + 1\n", encoding="utf-8")
+    (package / "b.py").write_text(
+        "def also_duplicate(item):\n    return item + 1\n",
+        encoding="utf-8",
+    )
+    return package
+
+
+def test_dry_cli_reports_findings_and_exits_success(tmp_path: Path) -> None:
+    package = _write_clone_pair(tmp_path)
+    result = runner.invoke(
+        app,
+        ["dry", "--path", str(package), "--min-lines", "1", "--min-nodes", "1"],
+    )
+
+    assert result.exit_code == ForgeExitCode.SUCCESS
+    assert "DRY analysis" in result.output
+    assert "ADVISORY" in result.output
+    assert "1.00" in result.output
+    assert "1-2" in result.output
+
+
+def test_dry_cli_json_includes_similarity_score(tmp_path: Path) -> None:
+    package = _write_clone_pair(tmp_path)
+    json_path = tmp_path / "dry-report.json"
+    result = runner.invoke(
+        app,
+        [
+            "dry",
+            "--path",
+            str(package),
+            "--min-lines",
+            "1",
+            "--min-nodes",
+            "1",
+            "--json",
+            str(json_path),
+        ],
+    )
+
+    assert result.exit_code == ForgeExitCode.SUCCESS
+    payload = json_path.read_text(encoding="utf-8")
+    assert '"similarity_score"' in payload
+    assert '"start_line"' in payload
+    assert '"end_line"' in payload
+
+
+def test_dry_cli_mocked_json_output(tmp_path: Path) -> None:
+    report = DryReport(
+        tool="dry",
+        status="pass",
+        findings=(
+            DryFinding(
+                qualified_name="alpha",
+                filepath="a.py",
+                duplicate_of="beta",
+                duplicate_filepath="b.py",
+                similarity_score=0.89,
+                start_line=4,
+                end_line=12,
+                node_count=45,
+            ),
+        ),
+        summary="1 potential DRY violation(s) detected (advisory).",
+    )
+    json_path = tmp_path / "report.json"
+    with patch("agentic_test_forge.cli.main.analyze_dry", return_value=report):
+        result = runner.invoke(app, ["dry", "--json", str(json_path)])
+
+    assert result.exit_code == ForgeExitCode.SUCCESS
+    assert "DRY analysis" in result.output
+    assert "0.89" in result.output
+    assert "4-12" in result.output
+    assert json_path.is_file()
+    assert '"tool": "dry"' in json_path.read_text(encoding="utf-8")
 
 
 def test_crap_reports_failure_when_threshold_exceeded() -> None:

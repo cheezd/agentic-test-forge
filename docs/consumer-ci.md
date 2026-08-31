@@ -377,9 +377,12 @@ dry_min_nodes = 20       # skip normalized subtrees smaller than this
 Local analysis without full `forge check`:
 
 ```bash
-forge dry --path src/
+forge dry
+forge dry --path src/ --path other_pkg/
 forge dry --path src/ --threshold 0.9 --json dry-report.json
 ```
+
+Omitted `--path` uses `[tool.forge].paths`. Repeat `--path` to override.
 
 JSON findings include `similarity_score`, `start_line`, `end_line`, and `node_count` in addition to v1 fields.
 

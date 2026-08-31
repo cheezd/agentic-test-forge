@@ -9,6 +9,9 @@ from pathlib import Path
 import pytest
 
 from agentic_test_forge.analysis.dry import (
+    DEFAULT_DRY_MIN_LINES,
+    DEFAULT_DRY_MIN_NODES,
+    DEFAULT_DRY_THRESHOLD,
     FunctionUnit,
     SimilarPair,
     _collect_fingerprints,
@@ -18,6 +21,36 @@ from agentic_test_forge.analysis.dry import (
     _normalize_body,
     analyze_dry,
 )
+
+# Shared structure with one extra normalized node on the right (Jaccard ~0.89).
+_PARTIAL_OVERLAP_LEFT = """
+def prepare(raw):
+    cleaned = raw.strip()
+    parsed = int(cleaned)
+    scaled = parsed * 2
+    bounded = min(scaled, 100)
+    labeled = str(bounded)
+    return labeled
+""".strip()
+
+_PARTIAL_OVERLAP_RIGHT = """
+def prepare_copy(text):
+    cleaned = text.strip()
+    parsed = int(cleaned)
+    scaled = parsed * 2
+    bounded = min(scaled, 100)
+    labeled = str(bounded)
+    extra = labeled.lower()
+    return labeled
+""".strip()
+
+_TINY_CLONE = "def tiny():\n    return 1\n"
+_SHORT_CLONE = """
+def padded(value):
+    alias = value
+    copy = alias
+    return copy
+""".strip() + "\n"
 
 
 def _function_from_source(source: str) -> ast.FunctionDef:
@@ -33,6 +66,15 @@ def _unit_from_source(source: str, *, name: str, filepath: str = "sample.py") ->
         qualified_name=name,
         filepath=Path(filepath),
     )
+
+
+def _write_src_files(tmp_path: Path, files: dict[str, str]) -> Path:
+    package = tmp_path / "src"
+    package.mkdir()
+    for relative, source in files.items():
+        target = package / relative
+        target.write_text(source, encoding="utf-8")
+    return package
 
 
 def test_normalize_renamed_locals_produce_identical_fingerprint_sets() -> None:
@@ -291,6 +333,58 @@ def test_analyze_dry_json_includes_similarity_score(tmp_path: Path) -> None:
     assert '"similarity_score"' in report.to_json()
 
 
+def test_analyze_dry_reports_partial_overlap_in_threshold_band(tmp_path: Path) -> None:
+    _write_src_files(
+        tmp_path,
+        {"left.py": _PARTIAL_OVERLAP_LEFT, "right.py": _PARTIAL_OVERLAP_RIGHT},
+    )
+
+    report = analyze_dry(["src"], search_root=tmp_path)
+
+    assert len(report.findings) == 1
+    score = report.findings[0].similarity_score
+    assert DEFAULT_DRY_THRESHOLD <= score < 1.0
+    assert {report.findings[0].qualified_name, report.findings[0].duplicate_of} == {
+        "prepare",
+        "prepare_copy",
+    }
+
+
+def test_analyze_dry_partial_overlap_excluded_above_default_threshold(tmp_path: Path) -> None:
+    _write_src_files(
+        tmp_path,
+        {"left.py": _PARTIAL_OVERLAP_LEFT, "right.py": _PARTIAL_OVERLAP_RIGHT},
+    )
+
+    report = analyze_dry(["src"], search_root=tmp_path, threshold=0.99)
+
+    assert report.findings == ()
+
+
+def test_analyze_dry_default_min_lines_excludes_tiny_clones(tmp_path: Path) -> None:
+    _write_src_files(tmp_path, {"a.py": _TINY_CLONE, "b.py": _TINY_CLONE.replace("tiny", "also")})
+
+    unfiltered = analyze_dry(["src"], search_root=tmp_path, min_lines=1, min_nodes=1)
+    filtered = analyze_dry(["src"], search_root=tmp_path)
+
+    assert len(unfiltered.findings) == 1
+    assert unfiltered.findings[0].similarity_score == 1.0
+    assert filtered.findings == ()
+    assert DEFAULT_DRY_MIN_LINES == 4
+
+
+def test_analyze_dry_default_min_nodes_excludes_short_clones(tmp_path: Path) -> None:
+    other = _SHORT_CLONE.replace("padded", "also_padded")
+    _write_src_files(tmp_path, {"a.py": _SHORT_CLONE, "b.py": other})
+
+    unfiltered = analyze_dry(["src"], search_root=tmp_path, min_lines=1, min_nodes=1)
+    filtered = analyze_dry(["src"], search_root=tmp_path)
+
+    assert len(unfiltered.findings) == 1
+    assert unfiltered.findings[0].node_count < DEFAULT_DRY_MIN_NODES
+    assert filtered.findings == ()
+
+
 @pytest.mark.slow
 def test_analyze_dry_completes_on_repo_src_within_five_seconds() -> None:
     repo_root = Path(__file__).resolve().parents[1]
@@ -303,4 +397,12 @@ def test_analyze_dry_completes_on_repo_src_within_five_seconds() -> None:
     elapsed = time.perf_counter() - start
 
     assert report.status == "pass"
+    assert report.advisory is True
     assert elapsed < 5.0
+    for finding in report.findings:
+        assert DEFAULT_DRY_THRESHOLD <= finding.similarity_score <= 1.0
+        assert finding.start_line >= 1
+        assert finding.end_line >= finding.start_line
+        assert finding.node_count >= DEFAULT_DRY_MIN_NODES
+        assert finding.qualified_name
+        assert finding.filepath
