@@ -33,7 +33,8 @@ The tool integrates with existing pytest/behave workflows rather than replacing 
 | **Agent report** | Structured JSON plus human-readable Rich summary for programmatic consumption. | Plain pytest output |
 | **Consumer project** | A separate Python repository that installs `agentic-test-forge` and configures `[tool.forge]` for local dev and CI. | This library's own repo (dogfooding only) |
 | **CI gate** | A CI job step that runs `forge check` (or staged subcommands) and fails the pipeline on non-zero exit. | Pre-commit hook or ad-hoc local run |
-| **DRY violation** | Detected duplication signal (basic radon or simple AST checks); advisory, not blocking by default. | CRAP or mutation failure |
+| **DRY violation** | Structural duplicate candidate between function bodies (Jaccard similarity on normalized AST fingerprints); advisory, not blocking by default. | CRAP or mutation failure |
+| **Similarity score** | Jaccard index (0.0–1.0) for a DRY finding pair; 1.00 = identical normalized structure; default report threshold 0.82. | CRAP score |
 
 Aliases: `agentic-test-forge` (distribution name) → package `agentic_test_forge`.
 

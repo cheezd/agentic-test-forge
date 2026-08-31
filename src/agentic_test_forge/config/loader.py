@@ -9,6 +9,7 @@ from typing import Any
 from agentic_test_forge.config.models import ForgeConfig
 from agentic_test_forge.config.parsers import (
     parse_crap_settings,
+    parse_dry_settings,
     parse_gates,
     parse_gherkin_settings,
     parse_mutation_settings,
@@ -59,6 +60,7 @@ def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
         gherkin_runner,
         gherkin_paths,
     ) = parse_gherkin_settings(raw, _DEFAULTS)
+    dry_threshold, dry_min_lines, dry_min_nodes = parse_dry_settings(raw, _DEFAULTS)
 
     manifest_dir = str(raw.get("manifest_dir", _DEFAULTS.manifest_dir))
 
@@ -75,6 +77,9 @@ def _parse_forge_section(raw: dict[str, Any]) -> ForgeConfig:
         gherkin_test_cmd=gherkin_test_cmd,
         gherkin_runner=gherkin_runner,
         gherkin_paths=gherkin_paths,
+        dry_threshold=dry_threshold,
+        dry_min_lines=dry_min_lines,
+        dry_min_nodes=dry_min_nodes,
         gates=parse_gates(raw, _DEFAULTS.gates),
     )
 

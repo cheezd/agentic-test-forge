@@ -44,4 +44,7 @@ class ForgeConfig:
     gherkin_test_cmd: str = "behave"
     gherkin_runner: GherkinRunner = "behave"
     gherkin_paths: list[str] = field(default_factory=lambda: ["features"])
+    dry_threshold: float = 0.82
+    dry_min_lines: int = 4
+    dry_min_nodes: int = 20
     gates: GateConfig = field(default_factory=GateConfig)

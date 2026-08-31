@@ -134,3 +134,37 @@ def parse_gherkin_settings(
     )
     paths = parse_string_list(raw, "gherkin_paths", list(defaults.gherkin_paths))
     return threshold, base_ref, test_cmd, runner, paths
+
+
+def parse_dry_settings(
+    raw: dict[str, Any],
+    defaults: ForgeConfig,
+) -> tuple[float, int, int]:
+    """Parse DRY similarity threshold and size filters."""
+    threshold = parse_float(
+        raw,
+        "dry_threshold",
+        defaults.dry_threshold,
+        label="dry_threshold",
+        min_value=0.0,
+        max_value=1.0,
+    )
+    min_lines = int(
+        parse_float(
+            raw,
+            "dry_min_lines",
+            float(defaults.dry_min_lines),
+            label="dry_min_lines",
+            min_value=1.0,
+        ),
+    )
+    min_nodes = int(
+        parse_float(
+            raw,
+            "dry_min_nodes",
+            float(defaults.dry_min_nodes),
+            label="dry_min_nodes",
+            min_value=1.0,
+        ),
+    )
+    return threshold, min_lines, min_nodes

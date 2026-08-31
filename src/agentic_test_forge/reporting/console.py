@@ -88,19 +88,26 @@ def print_dry_report(report: DryReport, console: Console) -> None:
     print_findings_table(
         console,
         title="Potential duplicate functions",
-        columns=(
-            ("Function", None),
-            ("File", None),
-            ("Duplicate of", None),
-        ),
         rows=[
             (
                 finding.qualified_name,
                 finding.filepath,
                 f"{finding.duplicate_of} ({finding.duplicate_filepath})",
+                f"{finding.similarity_score:.2f}",
+                f"{finding.start_line}-{finding.end_line}",
             )
-            for finding in report.findings
+            for finding in sorted(
+                report.findings,
+                key=lambda item: (-item.similarity_score, item.filepath, item.qualified_name),
+            )
         ],
+        columns=(
+            ("Function", None),
+            ("File", None),
+            ("Duplicate of", None),
+            ("Score", "right"),
+            ("Lines", "right"),
+        ),
     )
 
 

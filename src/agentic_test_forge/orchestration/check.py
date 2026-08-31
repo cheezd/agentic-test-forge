@@ -60,7 +60,13 @@ def run_quality_check(
 
     if config.gates.dry:
         gates_run.append("dry")
-        dry_report = analyze_dry(source_paths, search_root=root)
+        dry_report = analyze_dry(
+            source_paths,
+            search_root=root,
+            threshold=config.dry_threshold,
+            min_lines=config.dry_min_lines,
+            min_nodes=config.dry_min_nodes,
+        )
 
     if config.gates.crap:
         crap_report = _run_blocking_gate(
