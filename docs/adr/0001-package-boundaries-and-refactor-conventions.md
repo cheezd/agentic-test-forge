@@ -45,7 +45,7 @@ reporting/         errors.py (root)
 | `orchestration/` | Multi-gate pipeline for `forge check` | `run_quality_check`, `CheckReport` |
 | `analysis/` | CRAP and DRY analyzers | `analyze_crap`, `analyze_dry` |
 | `mutation/code/` | mutmut differential mutation | `analyze_mutation`, `resolve_mutation_scope` |
-| `mutation/gherkin/` | Examples-table mutation | `analyze_gherkin_mutation`, `resolve_gherkin_scope`, `parser.py` |
+| `mutation/gherkin/` | Feature parse, static preflight, Examples-table mutation | `analyze_gherkin_lint`, `analyze_gherkin_inventory`, `analyze_gherkin_validate_steps`, `analyze_gherkin_mutation`, `parser.py` |
 | `scope/` | Shared git diff and path resolution | `run_git_diff_names`, `normalize_paths`, `iter_files_by_suffix` |
 | `manifest/` | Differential state persistence | `load_manifest`, `save_manifest`, `partition_by_manifest_hash`, `prune_stale_manifest_entries` |
 | `reporting/` | Status enums, thresholds, JSON/console output | `ReportStatus`, `GatePolicy`, `reporting/console.py` |

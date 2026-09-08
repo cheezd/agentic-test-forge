@@ -19,11 +19,17 @@ from agentic_test_forge.cli.helpers import (
 from agentic_test_forge.config import load_config
 from agentic_test_forge.mutation.code import analyze_mutation
 from agentic_test_forge.mutation.gherkin import analyze_gherkin_mutation
+from agentic_test_forge.mutation.gherkin.inventory import analyze_gherkin_inventory
+from agentic_test_forge.mutation.gherkin.lint import analyze_gherkin_lint
+from agentic_test_forge.mutation.gherkin.validate_steps import analyze_gherkin_validate_steps
 from agentic_test_forge.orchestration import run_quality_check
 from agentic_test_forge.reporting.console import (
     print_crap_report,
     print_dry_report,
+    print_gherkin_inventory_report,
+    print_gherkin_lint_report,
     print_gherkin_mutation_report,
+    print_gherkin_validate_steps_report,
     print_mutation_report,
 )
 
@@ -32,6 +38,11 @@ app = typer.Typer(
     help="Quality workflow tools for Python (CRAP, mutation, Gherkin gates).",
     no_args_is_help=True,
 )
+gherkin_app = typer.Typer(
+    help="Static Gherkin preflight: lint, inventory, validate-steps.",
+    no_args_is_help=True,
+)
+app.add_typer(gherkin_app, name="gherkin")
 console = Console(stderr=True)
 
 
@@ -263,6 +274,113 @@ def mutate_gherkin(
             runner=config.gherkin_runner,
         ),
         print_report=print_gherkin_mutation_report,
+        console=console,
+        json_output=json_output,
+    )
+
+
+@gherkin_app.command("lint")
+def gherkin_lint(
+    path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--path",
+            help="Feature paths. Repeat for multiple. Defaults to [tool.forge].gherkin_paths.",
+        ),
+    ] = None,
+    require_tags: bool = typer.Option(
+        False,
+        "--require-tags",
+        help="Fail scenarios that have no tags.",
+    ),
+    flag_implementation_leakage: bool = typer.Option(
+        False,
+        "--flag-implementation-leakage",
+        help="Warn when steps look like class or module names.",
+    ),
+    json_output: str | None = typer.Option(
+        None,
+        "--json",
+        help="Write structured JSON report to this file.",
+    ),
+) -> None:
+    """Lint feature files for mutation-unready or inconsistent specs."""
+    config = load_config()
+    run_report_command(
+        analyze=lambda: analyze_gherkin_lint(
+            cli_path_list(path, config.gherkin_paths),
+            require_tags=require_tags,
+            flag_implementation_leakage=flag_implementation_leakage,
+        ),
+        print_report=print_gherkin_lint_report,
+        console=console,
+        json_output=json_output,
+    )
+
+
+@gherkin_app.command("inventory")
+def gherkin_inventory(
+    path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--path",
+            help="Feature paths. Repeat for multiple. Defaults to [tool.forge].gherkin_paths.",
+        ),
+    ] = None,
+    base: str | None = typer.Option(
+        None,
+        "--base",
+        help="Git ref; list scenarios only in files changed vs this ref.",
+    ),
+    json_output: str | None = typer.Option(
+        None,
+        "--json",
+        help="Write structured JSON inventory to this file.",
+    ),
+) -> None:
+    """List scenarios for sign-off packets (human table or --json)."""
+    config = load_config()
+    run_report_command(
+        analyze=lambda: analyze_gherkin_inventory(
+            cli_path_list(path, config.gherkin_paths),
+            base_ref=base,
+        ),
+        print_report=print_gherkin_inventory_report,
+        console=console,
+        json_output=json_output,
+    )
+
+
+@gherkin_app.command("validate-steps")
+def gherkin_validate_steps(
+    path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--path",
+            help="Feature paths. Repeat for multiple. Defaults to [tool.forge].gherkin_paths.",
+        ),
+    ] = None,
+    steps_path: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--steps-path",
+            help="Step-definition paths. Repeat for multiple. Defaults to <features>/steps/.",
+        ),
+    ] = None,
+    json_output: str | None = typer.Option(
+        None,
+        "--json",
+        help="Write structured JSON report to this file.",
+    ),
+) -> None:
+    """Report feature steps that have no matching step-definition pattern."""
+    config = load_config()
+    run_report_command(
+        analyze=lambda: analyze_gherkin_validate_steps(
+            cli_path_list(path, config.gherkin_paths),
+            steps_paths=optional_cli_paths(steps_path),
+        ),
+        print_report=print_gherkin_validate_steps_report,
         console=console,
         json_output=json_output,
     )

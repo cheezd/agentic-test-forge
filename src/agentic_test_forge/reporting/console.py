@@ -7,7 +7,10 @@ from rich.console import Console
 from agentic_test_forge.analysis.crap import CrapReport
 from agentic_test_forge.analysis.dry import DryReport
 from agentic_test_forge.mutation.code.report import MutationReport
+from agentic_test_forge.mutation.gherkin.inventory import GherkinInventoryReport
+from agentic_test_forge.mutation.gherkin.lint import GherkinLintReport
 from agentic_test_forge.mutation.gherkin.report import GherkinMutationReport
+from agentic_test_forge.mutation.gherkin.validate_steps import GherkinValidateStepsReport
 from agentic_test_forge.orchestration.report import CheckReport
 from agentic_test_forge.reporting.console_helpers import (
     print_advisory_header,
@@ -139,6 +142,92 @@ def print_check_report(report: CheckReport, console: Console) -> None:
     if report.gherkin is not None:
         console.print()
         print_gherkin_mutation_report(report.gherkin, console)
+
+
+def print_gherkin_lint_report(report: GherkinLintReport, console: Console) -> None:
+    """Render a human-readable Gherkin lint report."""
+    print_status_header(console, title="Gherkin lint", status=report.status)
+    console.print(report.summary)
+    print_findings_table(
+        console,
+        title="Lint findings",
+        columns=(
+            ("Rule", None),
+            ("Sev", None),
+            ("File", None),
+            ("Scenario", None),
+            ("Line", "right"),
+            ("Message", None),
+        ),
+        rows=[
+            (
+                finding.rule,
+                finding.severity,
+                finding.filepath,
+                finding.scenario_name,
+                str(finding.start_line),
+                finding.message,
+            )
+            for finding in report.findings
+        ],
+    )
+
+
+def print_gherkin_inventory_report(report: GherkinInventoryReport, console: Console) -> None:
+    """Render a human-readable Gherkin inventory."""
+    print_status_header(console, title="Gherkin inventory", status=report.status)
+    console.print(report.summary)
+    print_findings_table(
+        console,
+        title="Scenarios",
+        columns=(
+            ("File", None),
+            ("Scenario", None),
+            ("Kind", None),
+            ("Examples", "center"),
+            ("Tags", None),
+            ("Lines", "right"),
+        ),
+        rows=[
+            (
+                item.filepath,
+                item.name,
+                item.kind,
+                "yes" if item.has_examples else "no",
+                " ".join(item.tags),
+                f"{item.start_line}-{item.end_line}",
+            )
+            for item in report.scenarios
+        ],
+    )
+
+
+def print_gherkin_validate_steps_report(
+    report: GherkinValidateStepsReport,
+    console: Console,
+) -> None:
+    """Render a human-readable undefined-step report."""
+    print_status_header(console, title="Gherkin validate-steps", status=report.status)
+    console.print(report.summary)
+    print_findings_table(
+        console,
+        title="Undefined steps",
+        columns=(
+            ("File", None),
+            ("Scenario", None),
+            ("Line", "right"),
+            ("Step", None),
+        ),
+        rows=[
+            (
+                finding.filepath,
+                finding.scenario_name,
+                str(finding.start_line),
+                finding.step or finding.message,
+            )
+            for finding in report.findings
+        ],
+    )
 
 
 def print_gherkin_mutation_report(report: GherkinMutationReport, console: Console) -> None:

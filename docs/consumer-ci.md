@@ -247,14 +247,27 @@ Omitted `--features-path` / `--path` on `forge mutate-gherkin` uses `gherkin_pat
 
 ### Commands
 
-Smoke the suite, then mutate. Dogfood CI does the same from `pilot/`:
+Cheap preflight (no Django, no mutation), then smoke the suite, then mutate. Dogfood CI does the same from `pilot/`:
 
 ```bash
+# After drafting or promoting .feature files:
+forge gherkin lint --path features/
+forge gherkin inventory --path features/ --json inventory.json
+forge gherkin validate-steps --path features/
+
 python -m behave features/
 forge mutate-gherkin --full --threshold 80
 # or, with the gate enabled:
 forge check
 ```
+
+| Command | When | Exit `1` when |
+|---------|------|----------------|
+| `forge gherkin lint` | Before human sign-off on drafts; again on `features/` | Missing/empty Examples, duplicate names, or `--require-tags` with no tags |
+| `forge gherkin inventory` | Sign-off packet / PR notes | Never (listing only). `--base main` limits to changed `.feature` files |
+| `forge gherkin validate-steps` | After promoting specs, before a full behave run | A feature step has no matching `@given`/`@when`/`@then`/`@step` pattern under `features/steps/` (or `--steps-path`) |
+
+`lint --flag-implementation-leakage` warns on class/module-like step text (does not fail unless you treat warnings as errors in a wrapper). Inventory JSON schema version is `1` (`schema_version` field): `filepath`, `name`, `scenario_id`, `tags`, `has_examples`, `start_line`, `end_line`, `kind`.
 
 Gherkin mutation edits Examples table cells in changed `.feature` files, runs `gherkin_test_cmd` per mutant, and records results in `.forge/gherkin-manifest.json`. It does **not** need mutmut and **does** run on native Windows.
 
@@ -393,7 +406,7 @@ Defined by `ForgeExitCode` in `agentic_test_forge.cli.exit_codes`. Package layou
 | Code | Enum | Meaning |
 |------|------|---------|
 | `0` | `SUCCESS` | All enabled blocking gates passed |
-| `1` | `GATE_FAILURE` | Threshold failure in CRAP, mutation, or Gherkin gate |
+| `1` | `GATE_FAILURE` | Threshold failure in CRAP, mutation, or Gherkin gate; `gherkin lint` / `validate-steps` errors |
 | `2` | `TOOL_ERROR` | Tool/precondition error (missing `.coverage`, git error, mutmut unavailable) |
 
 DRY findings are **advisory** — they appear in the combined report but do not fail `forge check`.

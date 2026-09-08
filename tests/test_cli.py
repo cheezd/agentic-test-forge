@@ -33,6 +33,7 @@ def test_help_lists_subcommands() -> None:
     assert "mutate" in result.stdout
     assert "check" in result.stdout
     assert "mutate-gherkin" in result.stdout
+    assert "gherkin" in result.stdout
 
 
 def _write_clone_pair(tmp_path: Path) -> Path:

@@ -6,7 +6,7 @@ Canonical domain language for the `agentic_test_forge` library. Ticket research 
 
 ## Product purpose
 
-`agentic-test-forge` is a Python library and CLI (`forge`) that enforces Uncle Bob Martin's quality practices for AI-generated and legacy Python codebases: measure complexity and coverage (CRAP), validate tests via mutation (source and Gherkin), and expose a single quality gate for agents and CI.
+`agentic-test-forge` is a Python library and CLI (`forge`) that enforces Uncle Bob Martin's quality practices for AI-generated and legacy Python codebases: measure complexity and coverage (CRAP), statically check Gherkin before mutation, validate tests via mutation (source and Gherkin), and expose a single quality gate for agents and CI.
 
 **Primary use case:** Install into **consumer projects** (other repos in active development) to help clean up, harden, and improve code quality over time. When mature, **`forge check` runs as a CI pipeline gate** — typically after unit tests and coverage collection — blocking merges on threshold failures.
 
@@ -30,6 +30,9 @@ The tool integrates with existing pytest/behave workflows rather than replacing 
 | **Forge hash / manifest** | Stable content hash stored inline (`# forge-hash: abc123`) or in a manifest file to skip unchanged units in differential runs. On save, stale entries for deleted files or removed scenarios are pruned; existing but out-of-scope entries are retained. | Git commit SHA |
 | **Code mutation** | mutmut-driven changes to Python source under test. | Gherkin mutation |
 | **Gherkin mutation** | Mutations to `.feature` Examples tables (strings, numbers, edge cases); acceptance tests should fail. | Code mutation |
+| **Gherkin lint** | Static checks on `.feature` files (`forge gherkin lint`): missing/empty Examples, duplicate names, optional tags and implementation-leakage heuristics. Fails the process on error-severity findings. | Gherkin mutation; a test runner |
+| **Scenario inventory** | Machine listing of scenarios (`forge gherkin inventory [--json]`): file, name, tags, has Examples, line range. Sign-off packet for agents/CI. | Human `scenario_inventory.md` in a consumer repo |
+| **Undefined-step validation** | Preflight (`forge gherkin validate-steps`) that matches feature step text against behave / pytest-bdd decorator patterns in step files. Does not load Django or run the acceptance suite. | A full `behave` / pytest-bdd run |
 | **Agent report** | Structured JSON plus human-readable Rich summary for programmatic consumption. | Plain pytest output |
 | **Consumer project** | A separate Python repository that installs `agentic-test-forge` and configures `[tool.forge]` for local dev and CI. | This library's own repo (dogfooding only) |
 | **CI gate** | A CI job step that runs `forge check` (or staged subcommands) and fails the pipeline on non-zero exit. | Pre-commit hook or ad-hoc local run |
@@ -110,7 +113,7 @@ Gates evaluate **per file or scenario** and the **aggregate** score across mutat
 |---------|----------------|---------------------|
 | **Analysis** | CRAP scoring, DRY flagging, radon/coverage ingestion | Reads coverage data; exposes `analyze()` API and `forge crap` |
 | **Code mutation** | mutmut wrapper, differential scope, multiprocessing | Invokes pytest test runner; `forge mutate` (planned) |
-| **Gherkin mutation** | Parse/mutate `.feature` files, scenario hashes, run acceptance tests | behave/pytest-bdd runners; `forge mutate-gherkin` |
+| **Gherkin mutation** | Parse `.feature` files; static preflight (lint, inventory, validate-steps); mutate Examples tables; run acceptance tests | behave/pytest-bdd runners; `forge gherkin *`; `forge mutate-gherkin` |
 | **Orchestration** | Config, pipeline ordering, thresholds, exit codes, reporting | `forge check`; `[tool.forge]` config |
 | **CLI / reporting** | Typer commands, Rich output, JSON serialization | stdout, exit codes, programmatic API |
 
