@@ -2,7 +2,8 @@
 
 Contract (see docs/consumer-ci.md):
 - SUCCESS (0): all blocking gates passed
-- GATE_FAILURE (1): threshold failure in CRAP, mutation, or Gherkin gate; Gherkin lint / validate-steps errors
+- GATE_FAILURE (1): threshold failure in CRAP, mutation, or Gherkin gate;
+  Gherkin lint / validate-steps errors
 - TOOL_ERROR (2): tool or precondition error (missing coverage, git, mutmut, etc.)
 """
 
