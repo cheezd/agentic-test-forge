@@ -14,13 +14,13 @@ Install `agentic-test-forge` into a Python consumer repository and run `forge ch
 From PyPI:
 
 ```bash
-pip install agentic-test-forge==1.1.0
+pip install agentic-test-forge==1.2.0
 ```
 
 From Git (fallback):
 
 ```bash
-pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git@v1.1.0"
+pip install "agentic-test-forge @ git+https://github.com/cheezd/agentic-test-forge.git@v1.2.0"
 ```
 
 ## Version pinning
@@ -29,9 +29,9 @@ Pin an exact semver in CI and pre-commit so gate behavior stays reproducible acr
 
 | Surface | Pin | Bump when |
 |---------|-----|-----------|
-| GitHub Actions / CI | `pip install agentic-test-forge==1.1.0` | A new forge release changes thresholds, exit codes, or gate semantics you rely on |
-| Pre-commit | `rev: v1.1.0` on the hook repo + `pip install agentic-test-forge==1.1.0` in docs/setup | Same as CI — align hook `rev` with the PyPI version you install |
-| Local dev | `pip install agentic-test-forge==1.1.0` or editable producer install | Optional: float latest patch (`==1.1.*`) only if you accept drift |
+| GitHub Actions / CI | `pip install agentic-test-forge==1.2.0` | A new forge release changes thresholds, exit codes, or gate semantics you rely on |
+| Pre-commit | `rev: v1.2.0` on the hook repo + `pip install agentic-test-forge==1.2.0` in docs/setup | Same as CI — align hook `rev` with the PyPI version you install |
+| Local dev | `pip install agentic-test-forge==1.2.0` or editable producer install | Optional: float latest patch (`==1.2.*`) only if you accept drift |
 
 **When to bump:** After a tagged forge release (`v1.0.1`, `v1.1.0`, …), update pins in the consumer repo in the same PR (or a follow-up) once you have validated the new version against your thresholds. Patch releases are usually drop-in; minor/major releases may need threshold or gate config review.
 
@@ -89,7 +89,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e ".[dev]"
-          pip install agentic-test-forge==1.1.0
+          pip install agentic-test-forge==1.2.0
 
       - name: Run tests with coverage
         run: pytest --cov=src --cov-report=xml
@@ -157,7 +157,7 @@ Django tests with `coverage.py` (not pytest-cov required for the pilot path):
 
 ```bash
 cd apps/backend
-pip install agentic-test-forge==1.1.0 coverage
+pip install agentic-test-forge==1.2.0 coverage
 coverage run --source=analysis manage.py test tests --verbosity=0
 forge check --coverage-file .coverage
 ```
@@ -209,7 +209,7 @@ mutation = true  # ubuntu-latest or WSL only
 Install on the Linux runner:
 
 ```bash
-pip install agentic-test-forge==1.1.0 pytest pytest-django django
+pip install agentic-test-forge==1.2.0 pytest pytest-django django
 pytest -q
 forge mutate --full --threshold 80
 # or, with the gate enabled:
@@ -307,7 +307,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/cheezd/agentic-test-forge
-    rev: v1.1.0
+    rev: v1.2.0
     hooks:
       - id: forge-check
         # Optional overrides (omit --path to use [tool.forge].paths):
@@ -317,7 +317,7 @@ repos:
 Install hooks:
 
 ```bash
-pip install pre-commit agentic-test-forge==1.1.0
+pip install pre-commit agentic-test-forge==1.2.0
 pre-commit install
 ```
 

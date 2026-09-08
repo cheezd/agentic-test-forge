@@ -59,7 +59,7 @@ jobs:
           pytest --cov=agentic_test_forge --cov-report=term-missing
 
       - name: Install forge from PyPI
-        run: pip install agentic-test-forge==1.0.0
+        run: pip install agentic-test-forge==1.1.0
 
       - name: Run forge quality gate
         run: forge check --path src/agentic_test_forge --json forge-report.json

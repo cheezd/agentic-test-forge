@@ -6,13 +6,16 @@ Python quality enforcement for AI-generated and legacy codebases. Implements Unc
 
 ## Status
 
-**Latest PyPI: 1.1.0** — mutmut 3.5 runner, CLI config paths, CRAP relative coverage keys ([#135](https://github.com/cheezd/agentic-test-forge/issues/135)). v1.1 product work ([#58](https://github.com/cheezd/agentic-test-forge/issues/58)) shipped earlier; this tag is the pin consumers should use.
+**Latest PyPI: 1.2.0** — Gherkin preflight (`lint` / `inventory` / `validate-steps`) ([#153](https://github.com/cheezd/agentic-test-forge/issues/153)), semantic DRY ([#122](https://github.com/cheezd/agentic-test-forge/issues/122)). Pin `==1.2.0`.
 
 | Command | Status |
 |---------|--------|
 | `forge crap` | Available |
 | `forge mutate` | Available (Linux/WSL; mutmut does not run natively on Windows) |
 | `forge mutate-gherkin` | Available |
+| `forge gherkin lint` | Available |
+| `forge gherkin inventory` | Available |
+| `forge gherkin validate-steps` | Available |
 | `forge dry` | Available (advisory semantic DRY) |
 | `forge check` | Available (includes optional advisory DRY scan) |
 
@@ -25,7 +28,7 @@ pip install agentic-test-forge
 Pin a version:
 
 ```bash
-pip install agentic-test-forge==1.1.0
+pip install agentic-test-forge==1.2.0
 ```
 
 For local development of this repo:
@@ -109,13 +112,13 @@ Run `forge check` locally before commit (respects `[tool.forge.gates]`):
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/cheezd/agentic-test-forge
-    rev: v1.1.0
+    rev: v1.2.0
     hooks:
       - id: forge-check
 ```
 
 ```bash
-pip install pre-commit agentic-test-forge==1.1.0
+pip install pre-commit agentic-test-forge==1.2.0
 pre-commit install
 pytest --cov=src   # CRAP gate needs .coverage
 pre-commit run forge-check --all-files

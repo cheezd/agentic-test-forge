@@ -57,7 +57,7 @@ Dogfood mutation gates run on `ubuntu-latest` via `.github/workflows/ci.yml`:
 | `forge-mutate-pilot` | `pytest --cov=src/pilot_app tests/` then `forge mutate --path src/pilot_app --full` |
 | `forge-mutate-gherkin-pilot` | `python -m behave features/` then `forge mutate-gherkin --path features --full` |
 
-Install uses editable forge + pilot (`pip install -e ".[dev]"` and `pip install -e "./pilot[dev]"`). After the `v1.1.0` tag, consumers can instead `pip install agentic-test-forge==1.1.0`.
+Install uses editable forge + pilot (`pip install -e ".[dev]"` and `pip install -e "./pilot[dev]"`). After the `v1.2.0` tag, consumers can instead `pip install agentic-test-forge==1.2.0`.
 
 Local Linux smoke:
 
