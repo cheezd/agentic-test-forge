@@ -6,9 +6,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-08
+
+PyPI release of work on `main` since `v1.1.0`. Consumers who need Gherkin preflight must pin `==1.2.0` (those commands are not in 1.1.0).
+
+### Added
+
+- `forge gherkin lint`, `forge gherkin inventory`, `forge gherkin validate-steps` ([#153](https://github.com/cheezd/agentic-test-forge/issues/153))
+- Semantic DRY detection and `forge dry` (Jaccard on normalized AST; advisory) ([#122](https://github.com/cheezd/agentic-test-forge/issues/122))
+
 ### Changed
 
 - Consumer docs: pytest-django + mutmut recipe (works with caveats on Linux/WSL; `mutation_test_cmd` remains audit-only) ([#147](https://github.com/cheezd/agentic-test-forge/issues/147))
+
+### Notes
+
+- Install: `pip install agentic-test-forge==1.2.0`
+- Code mutation still requires Linux or WSL
+- Producer CI `forge-check` stays on the last published pin (`1.1.0`) until this tag is live
+
+[1.2.0]: https://github.com/cheezd/agentic-test-forge/releases/tag/v1.2.0
 
 ## [1.1.0] - 2026-08-29
 
