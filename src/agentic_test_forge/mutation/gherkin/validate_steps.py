@@ -113,17 +113,17 @@ def _collect_step_files(
     search_root: Path,
 ) -> list[Path]:
     if steps_paths:
-        roots = normalize_paths([str(p) for p in steps_paths], search_root)
-        return iter_files_by_suffix(roots, ".py")
+        explicit_roots = normalize_paths([str(p) for p in steps_paths], search_root)
+        return iter_files_by_suffix(explicit_roots, ".py")
 
-    roots: list[Path] = []
+    discovered: list[Path] = []
     for raw in normalize_paths([str(p) for p in feature_paths], search_root):
         if raw.is_file():
             raw = raw.parent
         steps_dir = raw / "steps"
         if steps_dir.is_dir():
-            roots.append(steps_dir)
-    return iter_files_by_suffix(roots, ".py")
+            discovered.append(steps_dir)
+    return iter_files_by_suffix(discovered, ".py")
 
 
 def _load_step_patterns(step_files: Sequence[Path]) -> list[re.Pattern[str]]:
