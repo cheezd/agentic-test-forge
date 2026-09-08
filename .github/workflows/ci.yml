@@ -34,7 +34,12 @@ jobs:
         run: pytest --cov=agentic_test_forge --cov-report=term-missing
 
       - name: CLI smoke test
-        run: forge --help
+        run: |
+          forge --help
+          forge gherkin --help
+          forge gherkin lint --help
+          forge gherkin inventory --help
+          forge gherkin validate-steps --help
 
   forge-check:
     runs-on: ubuntu-latest
